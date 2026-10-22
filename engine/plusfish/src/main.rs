@@ -72,6 +72,7 @@ like \"RNBQKBNR/PPPPPPPP\" (back row / front row, files a-h, two-letter symbols
 in brackets: \"R(CV)B(W)KB(CV)R/PPPPPPPP\").
 
 Common options: --threads N (games at once; default: all cores)  --pieces <ChessPlus/data/pieces>
+                --front-row-rule=true (experiment: random armies have no piece able to capture on the opponent's starting rows)
                 --params <file> (evaluation weights; \"none\" = from army costs)
 ";
 
@@ -147,6 +148,10 @@ fn pv_san(g: &Game, pv: &[Move]) -> String {
 fn main() {
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let args = Args::parse(&raw);
+    if args.flag("front-row-rule") {
+        FRONT_ROW_RULE.store(true, std::sync::atomic::Ordering::Relaxed);
+        eprintln!("note: front-row rule (experiment): random armies have no piece able to capture on the opponent's starting rows");
+    }
     let cmd = args.words.first().map(|s| s.as_str()).unwrap_or("help");
     if cmd == "enginematch" && args.flag("help") {
         print!("{}", ematch::HELP);
@@ -740,6 +745,10 @@ fn main() {
             let empty = Params::defaults(&cat);
             let _ = empty;
             run_games(&cat, games, threads(&args), &params, &params, &cfg, args.num("seed", 7), &pair, &progress);
+            if FRONT_ROW_RULE.load(std::sync::atomic::Ordering::Relaxed) {
+                let (tried, passed) = (ARMIES_TRIED.load(std::sync::atomic::Ordering::Relaxed), ARMIES_PASSED.load(std::sync::atomic::Ordering::Relaxed));
+                eprintln!("front-row rule: {} of {} random armies passed ({:.1}%)", passed, tried, 100.0 * passed as f64 / tried.max(1) as f64);
+            }
         }
         "values" => {
             let path = args.words.get(1).unwrap_or_else(|| die("usage: plusfish values games.jsonl"));

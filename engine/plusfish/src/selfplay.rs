@@ -9,7 +9,7 @@ use crate::game::*;
 use crate::position::*;
 use crate::search::*;
 use crate::util::Rng;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Debug)]
@@ -196,12 +196,47 @@ pub fn run_games(
     v.into_iter().map(|x| x.1).collect()
 }
 
+/// Experiment (Mac, Oct 2026), not a game rule: the "front-row rule": no
+/// piece may start able to capture anything on the opponent's two starting
+/// rows. With `--front-row-rule=true`, random armies follow it.
+pub static FRONT_ROW_RULE: AtomicBool = AtomicBool::new(false);
+/// Random armies made and how many followed the front-row rule (while it's on).
+pub static ARMIES_TRIED: AtomicUsize = AtomicUsize::new(0);
+pub static ARMIES_PASSED: AtomicUsize = AtomicUsize::new(0);
+
+/// True if no piece of `army` could capture anything on the opponent's two
+/// starting rows on move 1: the army plays White against a wall of Men on
+/// every square of those rows, and has no capture or Crack Shot at all.
+pub fn front_row_ok(cat: &Arc<Catalog>, army: &Army) -> bool {
+    let Some(man) = cat.kind_by_id("man") else { return true };
+    let wall = Army { name: String::new(), pieces: (0..8).flat_map(|f| (0..START_ROWS).map(move |r| (man, f, r))).collect(), mirror: true };
+    let g = army_game(cat, army, &wall, 8, 8);
+    let mut moves = Vec::new();
+    g.pos.gen_pseudo(&g.rules, &mut moves, GEN_CAPTURES);
+    moves.is_empty()
+}
+
+/// A random army for `budget`, following the front-row rule when it's on.
+fn random_army_for(cat: &Arc<Catalog>, rng: &mut Rng, budget: f64) -> Army {
+    loop {
+        let a = random_army_budget(cat, rng, budget);
+        if !FRONT_ROW_RULE.load(Ordering::Relaxed) {
+            return a;
+        }
+        ARMIES_TRIED.fetch_add(1, Ordering::Relaxed);
+        if front_row_ok(cat, &a) {
+            ARMIES_PASSED.fetch_add(1, Ordering::Relaxed);
+            return a;
+        }
+    }
+}
+
 /// A random pair of armies whose start makes sense (no king capturable or in
 /// check at the start).
 pub fn random_pair(cat: &Arc<Catalog>, rng: &mut Rng, budgets: (f64, f64)) -> (Army, Army) {
     loop {
-        let w = random_army_budget(cat, rng, budgets.0);
-        let b = random_army_budget(cat, rng, budgets.1);
+        let w = random_army_for(cat, rng, budgets.0);
+        let b = random_army_for(cat, rng, budgets.1);
         let g = army_game(cat, &w, &b, 8, 8);
         if !start_is_broken(&g) {
             return (w, b);
