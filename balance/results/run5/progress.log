@@ -1,0 +1,6 @@
+[2026-10-22 06:41:05 UTC] start; game version 90b0dce (experiment/front-row-rule); 64 cores
+[2026-10-22 06:41:05 UTC] part 1: selfplay 20000 games, 8000 nodes, seed 101, front-row rule
+[2026-10-22 06:49:59 UTC] part 1 finished (exit 0); front-row rule: 40000 of 165970 random armies passed (24.1%)
+[2026-10-22 06:49:59 UTC] part 2: 40 armies against themselves, 2000000 nodes, 8 threads, 8 at a time
+[2026-10-22 06:50:21 UTC] part 2 finished
+[2026-10-22 06:50:21 UTC] all done

@@ -11,6 +11,7 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 use plusfish_core::util::{Args, Rng};
 
+mod drift;
 mod ematch;
 mod meta;
 mod spsa;
@@ -44,6 +45,8 @@ Balancing
   spsa      Tune the search constants by SPSA self-play; see plusfish spsa --help
   start-check How well starting-position scores predict which army wins;
               see plusfish start-check --help
+  drift     Play random army pairs with the top move every turn and log how
+              far the score drifts from the start's; see plusfish drift --help
   meta      Grow a pool of armies that look strongest at turn 0 against each
               other (eval bar); see plusfish meta --help (--wide: search
               wide, games decide)
@@ -221,6 +224,13 @@ fn main() {
         }
         "climb-fixed" => {
             meta::run_fixed(&cat, &load_params(&cat, args.get("params")), &args);
+        }
+        "drift" => {
+            if args.flag("help") {
+                print!("{}", drift::HELP);
+                return;
+            }
+            drift::run(&cat, &load_params(&cat, args.get("params")), &args);
         }
         "start-check" => {
             let dir = find_pieces_dir(args.get("pieces")).unwrap_or_else(|e| die(&e));
@@ -771,9 +781,14 @@ fn main() {
         "tune" => {
             let path = args.words.get(1).unwrap_or_else(|| die("usage: plusfish tune games.jsonl --out params.txt"));
             let text = std::fs::read_to_string(path).unwrap_or_else(|e| die(&e.to_string()));
-            let games = report::read_games(&cat, &text);
-            let samples = report::samples_from_games(&cat, &games, args.num("skip", 8), 1, threads(&args));
-            eprintln!("{} games, {} quiet positions", games.len(), samples.len());
+            let samples = if args.flag("drift") {
+                // Positions from drift games, labelled by the later scores.
+                drift::samples(&cat, &args, path)
+            } else {
+                let games = report::read_games(&cat, &text);
+                report::samples_from_games(&cat, &games, args.num("skip", 8), 1, threads(&args))
+            };
+            eprintln!("{} quiet positions", samples.len());
             let start = load_params(&cat, args.get("params"));
             let mut frozen = vec![false; NFEAT];
             let mut seen = vec![false; NFEAT];
@@ -815,14 +830,21 @@ fn main() {
                 .filter(|&k| !cat.defs[k].is_king() && seen[k * PER_KIND + FE_MAT])
                 .map(|k| (k * PER_KIND + FE_MAT, cat.defs[k].value * 100.0))
                 .collect();
-            let tuned = tune::texel_newton(&samples, &start, &frozen, &cost_cp, args.num("ridge", 2e-4), args.num("iters", 12), threads(&args), &mut |i, loss| {
+            // Drift labels are win chances worked out from scores on a
+            // logistic scale of --k cp: fit on that scale, so the weights
+            // come out in the same centipawns as the rest of the evaluation.
+            let texel_k = if args.flag("drift") { Some(400.0 / args.num("k", 720.0)) } else { None };
+            let tuned = tune::texel_newton(&samples, &start, &frozen, &cost_cp, args.num("ridge", 2e-4), args.num("iters", 12), threads(&args), texel_k, &mut |i, loss| {
                 eprintln!("  iteration {:>2}: log loss {:.5}", i + 1, loss)
             });
             let k = tune::best_k(&samples, &tuned.w);
             let k_start = tune::best_k(&samples, &start.w);
             eprintln!("squared error before {:.5}, after {:.5}", tune::mse(&samples, &start.w, k_start), tune::mse(&samples, &tuned.w, k));
             let out = args.get("out").unwrap_or("params.txt");
-            std::fs::write(out, tuned.save(&cat, &seen)).unwrap_or_else(|e| die(&e.to_string()));
+            // Weights the games never touched keep their values from --params
+            // (left out, they'd fall back to the defaults when loaded).
+            let keep: Vec<bool> = (0..NFEAT).map(|i| seen[i] || start.tuned[i]).collect();
+            std::fs::write(out, tuned.save(&cat, &keep)).unwrap_or_else(|e| die(&e.to_string()));
             eprintln!("K = {:.3}; wrote {}", k, out);
         }
         _ => {

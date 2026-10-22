@@ -189,6 +189,27 @@ judged the pool armies worse), `--freeze` keeps some fixed, `--skip N`
 ignores each game's first N plies. An engine given as `<exe>@<weights.txt>`
 (enginematch, start-check) plays with those weights instead of its own.
 
+**Opening terms.** At the start every piece stands on its first two rows,
+where the middlegame's `reach`, row and mobility weights misjudge it: a
+Vampire still on its back row in the middlegame usually means a bad game (so
+its tuned reach weight is large), but at move 0 it means nothing, and that
+weight alone cost every Vampire about 2 pawns in start scores. So each piece
+type also has `omat`, `omob`, `oreach`, `orow1` (on its second row) and
+`oability` terms, plus a global `otempo`. Each is the matching feature times
+the share of pieces (not pawn types or kings) that haven't moved yet, so
+they fade as the armies develop. They are tuned on positions from the first
+40 plies of `drift` games (below), each labelled with how the game went 16 to
+40 plies later:
+
+```
+plusfish tune drift.jsonl --drift --only omat,omob,oreach,orow1,oability,otempo --threads 19 --out params.txt
+```
+
+`--drift` reads a drift file instead of self-play games (`--plies 40`,
+`--window 16,40`, `--k 720` = the logistic scale the later scores are turned
+into win chances with, and the tuning uses that same scale; `--blend B` mixes
+in the result; `--split train|test` keeps games with `i % 4 != 0` / `== 0`).
+
 ### Judging the starting position
 
 ```
@@ -200,6 +221,22 @@ wins: every army pair is played 20 times with each colour to find the truth
 (kept in `--truth` and reused), then each engine scores both starts. It
 reports the correlation with the real results (and the best possible with
 that many games), how often it picks the right side, and White's edge.
+
+```
+plusfish drift --games 4000 --nodes 40000 --threads 19 --out drift.jsonl
+plusfish drift --starts drift.jsonl --params new.txt --out starts.jsonl
+```
+
+`drift` plays random army pairs (both full budget) with the top move every
+turn (`--nodes` per move) and writes one JSON line per game: the start's
+score at the eval bar's budgets (`--eval-nodes 20000,150000`, a fresh search
+each, plus the score after each finished depth), the score at every ply,
+the material balance, the moves and the result. The games where the start
+score and the later scores disagree most are where the opening judgement is
+wrong; `reports/START_EVAL.md` is what 12,000 of them showed. `--starts`
+only re-scores the starts of an earlier file (another build or `--params`),
+so engines can be compared on the same games; `--features` adds the start's
+evaluation terms by name; `--pool <file>` draws half the armies from a pool.
 
 ### Growing an army pool from the eval bar (`meta`)
 

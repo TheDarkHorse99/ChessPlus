@@ -9,7 +9,7 @@ to run, in what order, and how to read what comes out.
 | Job | When | Needs Rust? | Time (19 cores) |
 |---|---|---|---|
 | [1. Piece values](#1-piece-values-the-balance-report) | after changing costs, moves or rules, or adding a piece | no | ~40 min |
-| [2. Train Plusfish's judgement](#2-train-plusfishs-judgement-tuning) | after adding a piece or changing its rules | only to put the result in the game | ~1 min + a 5 min test match |
+| [2. Train Plusfish's judgement](#2-train-plusfishs-judgement-tuning) | after adding a piece or changing its rules | only to put the result in the game | ~1 min + a 5 min test match (+75 min for the opening terms) |
 | [3. The meta pool](#3-the-meta-pool) | after cost or rule changes, new pieces, or a stronger engine | no | 2-4 hours |
 | [4. Quick questions](#4-quick-questions) | any time | no | seconds to minutes |
 | [5. After changing a piece's rules](#5-after-changing-a-pieces-rules) | before 1-3 | sometimes | minutes |
@@ -163,6 +163,23 @@ short-range ones; add a new piece's id (its `.tres` file name) if it's like
 them. Giving "where it stands" weights to every piece wasn't any stronger
 (ELO_LOG #26). Don't tune everything at once (no `--only`): that was tried and
 made the pawn weights jagged (ELO_LOG #25).
+
+*Opening terms* (after either recipe, whenever you've re-tuned the piece
+weights or added a piece; about 75 minutes). How each piece is judged at the
+very start, while the armies are still on their first two rows. These
+weights learn it from what happens 16 to 40 plies later in games Plusfish
+plays against itself (README, "Opening terms"; `reports/START_EVAL.md`):
+
+```
+$PF drift --games 4000 --nodes 40000 --threads 19 --params ../plusfish-work/params.txt --pool engine/plusfish/reports/meta_pool.txt --out ../plusfish-work/drift.jsonl
+$PF tune ../plusfish-work/drift.jsonl --drift --params ../plusfish-work/params.txt --only omat,omob,oreach,orow1,oability,otempo --threads 19 --out ../plusfish-work/params_open.txt
+```
+
+`--pool` makes about half the armies meta pool ones, so the opening terms
+also learn from the kind of armies people build. `params_open.txt` is then
+the whole set (the piece weights plus the opening ones): use it in place of
+`params.txt` in steps 3 and 4. More games help: the built-in weights were
+fitted on 9,000 (three runs like this one).
 
 `params.txt` is a plain text file, one weight per line:
 `mat:knight 358.9 175.5` means Plusfish counts a Knight as 359 in the

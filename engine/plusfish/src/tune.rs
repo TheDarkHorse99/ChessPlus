@@ -126,8 +126,10 @@ pub fn texel(all: &[Sample], start: &Params, frozen: &[bool], epochs: usize, lam
 /// values (so rarely-seen features stay sensible), and at the end the weights
 /// are rescaled so material matches army costs on average: centipawns stay
 /// "hundredths of an army point".
-pub fn texel_newton(samples: &[Sample], start: &Params, frozen: &[bool], cost_cp: &[(usize, f64)], ridge: f64, iters: usize, threads: usize, log: &mut dyn FnMut(usize, f64)) -> Params {
-    let k0 = best_k(samples, &start.w);
+/// `k`: the logistic scale (as in `win_prob`); None = the best fit for the
+/// starting weights.
+pub fn texel_newton(samples: &[Sample], start: &Params, frozen: &[bool], cost_cp: &[(usize, f64)], ridge: f64, iters: usize, threads: usize, k: Option<f64>, log: &mut dyn FnMut(usize, f64)) -> Params {
+    let k0 = k.unwrap_or_else(|| best_k(samples, &start.w));
     let to_logit = k0 * std::f64::consts::LN_10 / 400.0;
     let mut col_of = vec![usize::MAX; NFEAT];
     let mut cols = 0;

@@ -25,7 +25,19 @@ pub const FE_DEAD: usize = 5;
 /// that doesn't promote stands.
 pub const FE_ROW: usize = 6;
 pub const ROWS: usize = 8;
-pub const PER_KIND: usize = FE_ROW + ROWS;
+/// Opening corrections: each is the feature times `opening` (the share of
+/// both sides' pieces, not counting pawn types and kings, that haven't moved
+/// yet), so they fade as the armies develop. At the start every piece stands
+/// on its first two rows, where the middlegame's reach, row and mobility
+/// weights misjudge it: a piece still at home in the middlegame usually means
+/// a bad game, at move 0 it means nothing (drift analysis, Oct 2026).
+pub const FE_OMAT: usize = FE_ROW + ROWS;
+pub const FE_OMOB: usize = FE_OMAT + 1;
+pub const FE_OREACH: usize = FE_OMAT + 2;
+/// On its second row (a first-row piece counts only in `omat`).
+pub const FE_OROW1: usize = FE_OMAT + 3;
+pub const FE_OABIL: usize = FE_OMAT + 4;
+pub const PER_KIND: usize = FE_OABIL + 1;
 pub const G: usize = MAX_KINDS * PER_KIND;
 pub const G_CENTER: usize = G;
 pub const G_DEVELOP: usize = G + 1;
@@ -40,13 +52,19 @@ pub const G_RAISE: usize = G + 39;
 pub const G_TEMPO: usize = G + 40;
 pub const G_HANGING: usize = G + 41;
 pub const G_THREAT: usize = G + 42;
-pub const NFEAT: usize = G + 43;
+/// The side to move, times `opening`.
+pub const G_OTEMPO: usize = G + 43;
+pub const NFEAT: usize = G + 44;
 
 pub fn feature_name(cat: &Catalog, i: usize) -> String {
     if i < G {
         let k = i / PER_KIND;
         let id = cat.defs.get(k).map(|d| d.id.clone()).unwrap_or(format!("kind{}", k));
         let f = i % PER_KIND;
+        if f >= FE_OMAT {
+            let what = ["omat", "omob", "oreach", "orow1", "oability"][f - FE_OMAT];
+            return format!("{}:{}", what, id);
+        }
         if f >= FE_ROW {
             return format!("row{}:{}", f - FE_ROW, id);
         }
@@ -67,6 +85,7 @@ pub fn feature_name(cat: &Catalog, i: usize) -> String {
         G_TEMPO => "tempo".into(),
         G_HANGING => "hanging".into(),
         G_THREAT => "threatened".into(),
+        G_OTEMPO => "otempo".into(),
         _ => format!("f{}", i),
     }
 }
@@ -280,10 +299,17 @@ pub fn features<A: Acc>(p: &Position, r: &Rules, et: &EvalTables, acc: &mut A) {
     // Attack sets with the attacker's cost, to find pieces attacked by
     // something cheaper.
     let mut by_cost: [[(f32, u128); 64]; 2] = [[(0.0, 0); 64]; 2];
+    let (mut unmoved, mut pieces) = (0u32, 0u32);
     for t in 0..2 {
         for s in p.squares(t) {
             let c = p.sq[s];
             let k = kind_of(c);
+            if !r.info[k].is_pawn && !r.info[k].is_king {
+                pieces += 1;
+                if c & MOVED == 0 {
+                    unmoved += 1;
+                }
+            }
             let (m, a) = mobility(p, r, s, c);
             att[t] |= a;
             if mob_n[t] < 64 {
@@ -296,6 +322,7 @@ pub fn features<A: Acc>(p: &Position, r: &Rules, et: &EvalTables, acc: &mut A) {
             }
         }
     }
+    let opening = if pieces == 0 { 0.0 } else { unmoved as f32 / pieces as f32 };
     for t in 0..2 {
         let sign = if t == WHITE { 1.0 } else { -1.0 };
         let them = 1 - t;
@@ -315,6 +342,21 @@ pub fn features<A: Acc>(p: &Position, r: &Rules, et: &EvalTables, acc: &mut A) {
             if reach != 0.0 {
                 acc.add(base + FE_REACH, sign * reach);
             }
+            let row = if t == WHITE { r.rank(s) } else { r.h - 1 - r.rank(s) };
+            if opening > 0.0 {
+                let o = sign * opening;
+                acc.add(base + FE_OMAT, o);
+                acc.add(base + FE_OMOB, o * (m - et.reach_avg[k] * 0.5));
+                if reach != 0.0 {
+                    acc.add(base + FE_OREACH, o * reach);
+                }
+                if row == 1 {
+                    acc.add(base + FE_OROW1, o);
+                }
+                if info.ability != Ability::None && c & USED == 0 {
+                    acc.add(base + FE_OABIL, o);
+                }
+            }
             if et.dead[k * 2 + t] & (1u128 << s) != 0 {
                 acc.add(base + FE_DEAD, sign);
             }
@@ -327,7 +369,6 @@ pub fn features<A: Acc>(p: &Position, r: &Rules, et: &EvalTables, acc: &mut A) {
                     has_necro = true;
                 }
             }
-            let row = if t == WHITE { r.rank(s) } else { r.h - 1 - r.rank(s) };
             let file = r.file(s);
             if info.is_king {
                 acc.add(G_KCENTER, sign * et.center[s]);
@@ -419,6 +460,9 @@ pub fn features<A: Acc>(p: &Position, r: &Rules, et: &EvalTables, acc: &mut A) {
         }
     }
     acc.add(G_TEMPO, if p.side == WHITE { 1.0 } else { -1.0 });
+    if opening > 0.0 {
+        acc.add(G_OTEMPO, if p.side == WHITE { opening } else { -opening });
+    }
 }
 
 /// How many squares the piece on `s` can move to now (ignoring checks), and the
