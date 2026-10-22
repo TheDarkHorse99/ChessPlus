@@ -19,17 +19,19 @@
 # off: the PC stops it through AWS (tools/sims_server.sh stop).
 set -u
 export PF=~/ChessPlus/engine/plusfish/target/release/plusfish
-export OUT=~/plusfish-work/run6
-export RULE=--front-row-rule=true
+# Run 7 (Mac, 22 Oct 2026: Plusfish improved by PR #26) is the same without the
+# rule: OUT=~/plusfish-work/run7 RULE= SKIP_32K=1 bash tools/balance/run6_server.sh
+export OUT="${OUT:-$HOME/plusfish-work/run6}"
+export RULE="${RULE---front-row-rule=true}"
 mkdir -p "$OUT/pairs" "$OUT/logs"
 rm -f "$OUT/DONE"
 log() { echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] $*" >> "$OUT/progress.log"; }
 cd ~/ChessPlus
-log "start; game version $(git rev-parse --short HEAD) ($(git rev-parse --abbrev-ref HEAD)); $(nproc) cores; rule $RULE"
+log "start; game version $(git rev-parse --short HEAD) ($(git rev-parse --abbrev-ref HEAD)); $(nproc) cores; rule ${RULE:-none}"
 
 log "part 1: meta --wide 64 --game-climb --king-exposed reject --rounds 15 --seed 1"
 "$PF" meta --wide 64 --game-climb --king-exposed reject --rounds 15 --seed 1 --threads 64 \
-	--pool engine/plusfish/reports/meta_pool.txt --out "$OUT/meta_pool.txt" "$RULE" > "$OUT/meta.log" 2>&1
+	--pool engine/plusfish/reports/meta_pool.txt --out "$OUT/meta_pool.txt" ${RULE:+"$RULE"} > "$OUT/meta.log" 2>&1
 log "part 1 finished (exit $?)"
 
 grep -v '^#' "$OUT/meta_pool.txt" | grep -v '^ *$' | awk -F' [|] ' '{ print $2 "|" $1 }' | grep -v '^Standard|' > "$OUT/armies.txt"
@@ -72,9 +74,11 @@ echo "name|army|result" > "$OUT/mirror.txt"
 tr '\n' '\0' < "$OUT/armies.txt" | xargs -0 -P 8 -I{} bash -c 'mirror "$1"' _ {} >> "$OUT/mirror.txt"
 log "part 3 finished"
 
+if [ -z "${SKIP_32K:-}" ]; then
 log "part 4: selfplay 10000 games, 32000 nodes, seed 202, front-row rule"
-"$PF" selfplay --games 10000 --nodes 32000 --seed 202 --threads 64 --out "$OUT/selfplay_32k.jsonl" "$RULE" > "$OUT/logs/selfplay_32k.txt" 2>&1
+"$PF" selfplay --games 10000 --nodes 32000 --seed 202 --threads 64 --out "$OUT/selfplay_32k.jsonl" ${RULE:+"$RULE"} > "$OUT/logs/selfplay_32k.txt" 2>&1
 log "part 4 finished (exit $?); $(grep 'front-row rule:' "$OUT/logs/selfplay_32k.txt" | tail -1)"
+fi
 
 log "all done"
 touch "$OUT/DONE"
