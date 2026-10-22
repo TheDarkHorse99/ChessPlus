@@ -13,6 +13,23 @@ use crate::util::Rng;
 use std::sync::Arc;
 
 pub const BUDGET: f64 = 39.0;
+
+/// Experiment (Mac, Oct 2026), not a game rule: set (by --front-row-rule=true)
+/// to switch on the Front-row rule in `Army::problems`.
+pub static FRONT_ROW_CATALOG: std::sync::OnceLock<Arc<Catalog>> = std::sync::OnceLock::new();
+
+/// True if no piece of `army` could capture anything on the opponent's two
+/// starting rows on move 1 (the Front-row rule): the army plays White against
+/// a wall of Men on every square of those rows, and has no capture or Crack
+/// Shot at all.
+pub fn front_row_ok(cat: &Arc<Catalog>, army: &Army) -> bool {
+    let Some(man) = cat.kind_by_id("man") else { return true };
+    let wall = Army { name: String::new(), pieces: (0..8).flat_map(|f| (0..START_ROWS).map(move |r| (man, f, r))).collect(), mirror: true };
+    let g = army_game(cat, army, &wall, 8, 8);
+    let mut moves = Vec::new();
+    g.pos.gen_pseudo(&g.rules, &mut moves, GEN_CAPTURES);
+    moves.is_empty()
+}
 pub const START_ROWS: i32 = 2;
 pub const MAX_COPIES: usize = 2;
 pub const MAX_EXTRA_ROYALS: usize = 1;
@@ -154,6 +171,12 @@ impl Army {
     /// Everything wrong with the army (`Army.problems`). Empty = legal.
     pub fn problems(&self, cat: &Catalog, width: i32) -> Vec<String> {
         let mut found = Vec::new();
+        // Experiment (Mac, Oct 2026): the Front-row rule, when it's on.
+        if let Some(full) = FRONT_ROW_CATALOG.get() {
+            if width == 8 && !front_row_ok(full, self) {
+                found.push("Front-row rule: a piece could capture on the opponent's starting rows on move 1.".to_string());
+            }
+        }
         let cost = self.cost(cat);
         if cost > BUDGET + 1e-9 {
             found.push(format!("Costs {} points; the budget is {}.", cost, BUDGET));

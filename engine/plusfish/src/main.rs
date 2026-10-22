@@ -83,7 +83,11 @@ fn die(msg: &str) -> ! {
 
 fn load_catalog(args: &Args) -> Arc<Catalog> {
     let dir = find_pieces_dir(args.get("pieces")).unwrap_or_else(|e| die(&e));
-    Arc::new(Catalog::load_dir(&dir).unwrap_or_else(|e| die(&e)))
+    let cat = Arc::new(Catalog::load_dir(&dir).unwrap_or_else(|e| die(&e)));
+    if args.flag("front-row-rule") {
+        let _ = FRONT_ROW_CATALOG.set(cat.clone());
+    }
+    cat
 }
 
 

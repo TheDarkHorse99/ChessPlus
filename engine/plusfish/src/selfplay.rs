@@ -204,18 +204,6 @@ pub static FRONT_ROW_RULE: AtomicBool = AtomicBool::new(false);
 pub static ARMIES_TRIED: AtomicUsize = AtomicUsize::new(0);
 pub static ARMIES_PASSED: AtomicUsize = AtomicUsize::new(0);
 
-/// True if no piece of `army` could capture anything on the opponent's two
-/// starting rows on move 1: the army plays White against a wall of Men on
-/// every square of those rows, and has no capture or Crack Shot at all.
-pub fn front_row_ok(cat: &Arc<Catalog>, army: &Army) -> bool {
-    let Some(man) = cat.kind_by_id("man") else { return true };
-    let wall = Army { name: String::new(), pieces: (0..8).flat_map(|f| (0..START_ROWS).map(move |r| (man, f, r))).collect(), mirror: true };
-    let g = army_game(cat, army, &wall, 8, 8);
-    let mut moves = Vec::new();
-    g.pos.gen_pseudo(&g.rules, &mut moves, GEN_CAPTURES);
-    moves.is_empty()
-}
-
 /// A random army for `budget`, following the front-row rule when it's on.
 fn random_army_for(cat: &Arc<Catalog>, rng: &mut Rng, budget: f64) -> Army {
     loop {
