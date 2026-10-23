@@ -76,6 +76,7 @@ in brackets: \"R(CV)B(W)KB(CV)R/PPPPPPPP\").
 
 Common options: --threads N (games at once; default: all cores)  --pieces <ChessPlus/data/pieces>
                 --quiet-first-move=true (experiment: no captures or abilities on either side's first move)
+                --white-quiet-first=true (experiment: no captures or abilities on White's first move unless in check)
                 --params <file> (evaluation weights; \"none\" = from army costs)
 ";
 
@@ -154,6 +155,10 @@ fn main() {
     if args.flag("quiet-first-move") {
         QUIET_FIRST_MOVE.store(true, std::sync::atomic::Ordering::Relaxed);
         eprintln!("note: quiet first move (experiment): no captures or abilities on either side's first move");
+    }
+    if args.flag("white-quiet-first") {
+        WHITE_QUIET_FIRST.store(true, std::sync::atomic::Ordering::Relaxed);
+        eprintln!("note: White-only quiet first move (experiment): no captures or abilities on White's first move unless in check");
     }
     let cmd = args.words.first().map(|s| s.as_str()).unwrap_or("help");
     if cmd == "enginematch" && args.flag("help") {
