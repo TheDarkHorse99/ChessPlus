@@ -34,12 +34,14 @@ build() {
 	git checkout -q --detach "$1" || fail "checkout $1"
 	rm -f engine/plusfish/target/release/plusfish
 	(cd engine/plusfish && ~/.cargo/bin/cargo build --release -q) || fail "build $1"
-	cp engine/plusfish/target/release/plusfish "$W/bin/$2" || fail "copy $2"
+	# Each build keeps the name "plusfish" (in its own folder): the server's idle
+	# switch-off only counts programs called exactly that.
+	mkdir -p "$W/bin/$2" && cp engine/plusfish/target/release/plusfish "$W/bin/$2/plusfish" || fail "copy $2"
 	log "built $2 from $1 ($(git rev-parse --short HEAD))"
 }
-build origin/main pf-main
+build origin/main main
 rm -rf "$W/pieces/p100" && cp -r data/pieces "$W/pieces/p100"
-build origin/experiment/white-quiet-first pf-wq
+build origin/experiment/white-quiet-first wq
 git checkout -q --detach origin/experiment/cheap-pawns || fail "checkout cheap-pawns"
 rm -rf "$W/pieces/p075" "$W/pieces/p050"
 cp -r data/pieces "$W/pieces/p075" && cp -r data/pieces "$W/pieces/p050"
@@ -50,7 +52,7 @@ for p in p100 p075 p050; do log "pieces $p: Pawn $(grep '^value' "$W/pieces/$p/p
 [ "$(grep '^value' "$W/pieces/p050/pawn.tres")" = "value = 0.5" ] || fail "p050 pawn cost"
 
 # perft 1 without and with the rule.
-count() { "$W/bin/pf-wq" perft --fen "$1" --depth 1 --pieces "$W/pieces/p100" $2 2>/dev/null | awk '/^perft/ { print $4 }'; }
+count() { "$W/bin/wq/plusfish" perft --fen "$1" --depth 1 --pieces "$W/pieces/p100" $2 2>/dev/null | awk '/^perft/ { print $4 }'; }
 check() {
 	local without with
 	without=$(count "$2" "")
@@ -69,14 +71,14 @@ check "White's second move, unrestricted" "4k3/8/8/8/8/8/3r4/4K3 w - - 0 2" same
 
 log "run 9"
 git checkout -q --detach origin/experiment/white-quiet-first || fail "checkout white-quiet-first"
-PF="$W/bin/pf-wq" PF_MAIN="$W/bin/pf-main" PIECES="$W/pieces/p100" bash tools/balance/run9_server.sh
+PF="$W/bin/wq/plusfish" PF_MAIN="$W/bin/main/plusfish" PIECES="$W/pieces/p100" bash tools/balance/run9_server.sh
 [ -f "$W/run9/DONE" ] || fail "run 9 didn't finish"
 
 git checkout -q --detach origin/experiment/cheap-pawns || fail "checkout cheap-pawns"
 for setting in "0.75 p075" "0.5 p050"; do
 	set -- $setting
 	log "run 8, Pawn $1"
-	OUT="$W/run8/$2" PF="$W/bin/pf-main" PIECES="$W/pieces/$2" PRICE="$1" bash tools/balance/run8_server.sh
+	OUT="$W/run8/$2" PF="$W/bin/main/plusfish" PIECES="$W/pieces/$2" PRICE="$1" bash tools/balance/run8_server.sh
 	[ -f "$W/run8/$2/DONE" ] || fail "run 8 Pawn $1 didn't finish"
 done
 
