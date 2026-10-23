@@ -50,8 +50,9 @@ already does what the referee needs:
 
 Send `nodes: 1, depth: 1, hash_mb: 1` so it barely searches.
 
-Known risk: when two Jesters could take the same hit, core and Plusfish may pick
-different ones. This is rare; ask Nicholas to make both choose the same way.
+When more than one Jester could take the same hit, the attacker chooses which
+and the move names it (`c7xe5/d4`); core and Plusfish both make one move per
+Jester, so they agree.
 
 ## Design
 

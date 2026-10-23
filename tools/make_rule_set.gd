@@ -38,6 +38,9 @@ const SHORT_GAMES := [
 	["RNBQKBNR/PPPPPPPP", false, "RNBQKBNR/PPPPPPPP", false, ["f2-f3", "e7-e5", "g2-g4", "d8-h4"]],
 	# A Lance looking straight at Black's king before any move: King exposed.
 	["RNBQKBNR/PPPPLPPP", false, "RNBQKBNR/PPPP1PPP", false, []],
+	# Black's Jesters on a8 and c8 could both take the Wizard's hit on b8: White
+	# chooses the one on a8.
+	["(PA)W(WW)K(GA)JMJ/(GA)1(BR)PE(WW)(AS)1", true, "M(BD)(GA)KGJVJ/(AS)(AS)PN(CT)P1(CV)", true, ["b1xb8/a8", "a8xb8"]],
 ]
 ## Armies that break the rules, with the problems the game finds.
 const BROKEN := [

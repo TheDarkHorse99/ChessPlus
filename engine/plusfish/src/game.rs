@@ -86,7 +86,9 @@ pub fn parse_square(r: &Rules, t: &str) -> Option<usize> {
 }
 
 /// `Move.to_text()`: "e2-e4", "e4xd5", "e7-e8=Q", "a1!c3" (Crack Shot), "d2!=Q"
-/// (Raise Dead), "@e3" (Haunt), "c1~g5" (Song of Slumber), "e4!" (Full Moon).
+/// (Raise Dead), "@e3" (Haunt), "c1~g5" (Song of Slumber), "e4!" (Full Moon);
+/// "c7xe5/d4", "a1!c3/d4" when the attacker chose the Jester on d4 to take
+/// the hit.
 pub fn move_text(r: &Rules, m: Move) -> String {
     if m.flags & F_HAUNT != 0 {
         return format!("@{}", square_name(r, m.to as usize));
@@ -101,7 +103,7 @@ pub fn move_text(r: &Rules, m: Move) -> String {
         return format!("{}!={}", square_name(r, m.from as usize), r.def(m.extra as usize).symbol.to_uppercase());
     }
     if m.flags & F_CRACK != 0 {
-        return format!("{}!{}", square_name(r, m.from as usize), square_name(r, m.to as usize));
+        return format!("{}!{}{}", square_name(r, m.from as usize), square_name(r, m.to as usize), decoy_text(r, m));
     }
     let mut t = format!(
         "{}{}{}",
@@ -113,7 +115,17 @@ pub fn move_text(r: &Rules, m: Move) -> String {
         t.push('=');
         t.push_str(&r.def(m.promo as usize - 1).symbol.to_uppercase());
     }
-    t
+    t + &decoy_text(r, m)
+}
+
+/// "/d4" (the Jester's square) when the attacker chose which Jester takes the
+/// hit, else "" (`Move.decoy_text`).
+fn decoy_text(r: &Rules, m: Move) -> String {
+    if m.flags & F_CHOICE != 0 {
+        format!("/{}", square_name(r, m.extra as usize))
+    } else {
+        String::new()
+    }
 }
 
 /// Standard algebraic notation as the game writes it (`Notation.san`).
@@ -160,6 +172,8 @@ pub fn san(p: &Position, r: &Rules, m: Move) -> String {
         if m.flags & F_CRACK != 0 {
             t.push('!');
         }
+        // The attacker chose which Jester takes the hit: Bxe5/d4.
+        t.push_str(&decoy_text(r, m));
     }
     t + &check_suffix(p, r, m)
 }
@@ -203,13 +217,25 @@ fn check_suffix(p: &Position, r: &Rules, m: Move) -> String {
 }
 
 /// The legal move written as `text`: move text ("e2-e4") or SAN ("e4", "Nf3+").
+/// A capture written without the Jester's square when the attacker had a
+/// choice of Jesters (saved before that rule, Oct 2026) finds the first, as
+/// `GameState.find_move` does.
 pub fn find_move(p: &Position, r: &Rules, text: &str) -> Option<Move> {
     let want = text.trim().trim_end_matches(|c| c == '+' || c == '#');
     let legal = p.legal_moves(r);
     if let Some(&m) = legal.iter().find(|&&m| move_text(r, m) == want) {
         return Some(m);
     }
-    legal.into_iter().find(|&m| san(p, r, m).trim_end_matches(|c| c == '+' || c == '#') == want)
+    if let Some(&m) = legal.iter().find(|&&m| san(p, r, m).trim_end_matches(|c| c == '+' || c == '#') == want) {
+        return Some(m);
+    }
+    if want.contains('/') {
+        return None;
+    }
+    let first_choice = |name: &dyn Fn(Move) -> String| {
+        legal.iter().copied().find(|&m| m.flags & F_CHOICE != 0 && name(m).split('/').next() == Some(want))
+    };
+    first_choice(&|m| move_text(r, m)).or_else(|| first_choice(&|m| san(p, r, m)))
 }
 
 // ---------------------------------------------------------------------------

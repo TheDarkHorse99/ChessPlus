@@ -146,7 +146,7 @@ async function move(user: string, body: Record<string, any>): Promise<Response> 
   const game = await storedGame(code);
   if (!game) return reply({ error: `There's no game with the code ${code}.` }, 400);
   const text = String(body.move ?? "");
-  let refereed = !!game.refereed;
+  const refereed = !!game.refereed;
   let finished = !!body.finished;
   // Judge only a move that would be played: the game on, at the expected move,
   // by the side to move (the database function turns away the rest, e.g. the
@@ -155,15 +155,9 @@ async function move(user: string, body: Record<string, any>): Promise<Response> 
   if (refereed && game.status === "playing" && game.move_count === body.expected && body.seat === mover) {
     const rs = ruleSet(game.rules);
     if (!rs) return reply({ error: UPDATE_NEEDED }, 400);
-    if (text.includes("/")) {
-      // The attacker chose which Jester takes the hit: Plusfish doesn't know
-      // that rule yet, so from here only the turn order is checked.
-      refereed = false;
-    } else {
-      const verdict = judge(game.white_army, game.black_army, [...(game.moves as string[]), text], rs, plusfish);
-      if (!verdict.legal) return reply({ error: "That move isn't allowed." }, 400);
-      finished = verdict.outcome !== "none";
-    }
+    const verdict = judge(game.white_army, game.black_army, [...(game.moves as string[]), text], rs, plusfish);
+    if (!verdict.legal) return reply({ error: "That move isn't allowed." }, 400);
+    finished = verdict.outcome !== "none";
   }
   return await rpc("referee_play_move", {
     p_user: user, p_code: code, p_seat: body.seat, p_move: text, p_expected: body.expected,

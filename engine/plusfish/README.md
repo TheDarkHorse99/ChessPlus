@@ -384,6 +384,12 @@ Squires, Knights and Berserkers (78,784 positions, 11,258 with a Berserker,
 229 where a Squire protected an attacked Knight, 68 of them through a piece
 in its way): two mismatches, both the two-Jester case. The old engine
 failed on the Squire positions.
+After Mac's Jester change (Oct 2026: if more than one Jester could take the
+hit, the attacker chooses which), 600 more games with two Jesters an army
+(143,303 positions, 353 offering a choice of Jesters, 95 such choices
+played): zero mismatches (the engine before failed 110 games). Perft from six
+two-Jester positions (with Archers, Squires, Rams, Bards and more) matches the
+game's own count to depth 3, two of them to depth 4.
 
 ```
 plusfish trace-games --count 40 --seed 1 > games.txt
@@ -394,10 +400,11 @@ plusfish trace-check games.txt trace.jsonl
 
 (Copy `verify/plusfish_trace.gd` into the game's `tools/` folder first.)
 
-One rule can't be matched exactly: if two Jesters could both take the same
-hit, the game picks whichever its internal piece list holds first, which
-depends on the order pieces last moved; Plusfish picks the one on the lower
-square.
+If more than one Jester could take the same hit, the attacker chooses which
+(Mac, Oct 2026): the capture is one move per Jester, and its text names the
+Jester's square (`c7xe5/d4`, Crack Shot `a1!c3/d4`, SAN `Bxe5/d4`). A text
+without it, from before the rule, finds the Jester on the lower square
+(the game finds the first in its piece list, which may differ).
 
 ## Engine details
 

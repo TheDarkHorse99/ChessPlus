@@ -199,9 +199,8 @@ func test_tapping_the_jester_to_take_the_hit() -> void:
 	check(view.jester_choices.is_empty(), "...and stops choosing")
 	view.free()
 
-func test_plusfish_is_off_with_two_jesters_on_a_side() -> void:
-	check(not PlusfishLink.supports(_game(TWO_JESTERS)), "Two Jesters on one side: Plusfish doesn't know the choice yet")
-	check(PlusfishLink.supports(_game("k2j4/2b5/8/4R3/3J4/8/8/7K b - - 0 1")), "One each: fine")
+func test_plusfish_knows_the_attacker_chooses_the_jester() -> void:
+	check(PlusfishLink.supports(_game(TWO_JESTERS)), "Two Jesters on one side: the eval bar still works")
 
 func test_jester_swap_animates_and_plusfish_knows_it() -> void:
 	var state := _game("k7/2b5/8/4R3/3J4/8/8/7K b - - 0 1")

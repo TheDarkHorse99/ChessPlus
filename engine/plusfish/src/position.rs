@@ -52,6 +52,10 @@ pub const F_MOON: u16 = 512;
 /// A capture a Jester takes instead: the Jester on `extra` swaps places with
 /// the piece the capture was aimed at, and is captured.
 pub const F_DECOY: u16 = 1024;
+/// With F_DECOY: more than one Jester could take this hit, so the attacker
+/// chose this one (Mac, Oct 2026; `Move.decoy_choice`). There's one move per
+/// Jester, and the move's text names the Jester's square ("c7xe5/d4").
+pub const F_CHOICE: u16 = 2048;
 /// Every special-ability move.
 pub const F_ABILITY: u16 = F_CRACK | F_RAISE | F_HAUNT | F_SONG | F_MOON;
 
@@ -1557,10 +1561,9 @@ impl Position {
     /// (`MoveGenerator._apply_guards`): a protected piece (a Knight anywhere
     /// in a Squire's move pattern, even through pieces) can't be captured,
     /// and a capture of a piece a Jester could reach (not a pawn type, king
-    /// or Jester) becomes a
-    /// swap in which the Jester is captured instead. If two Jesters could
-    /// both take the hit, the one on the lower square does (the game picks
-    /// whichever its piece list holds first).
+    /// or Jester) becomes a swap in which the Jester is captured instead. If
+    /// more than one Jester could take the hit, the attacker chooses which
+    /// (Mac, Oct 2026): the capture becomes one move per Jester (F_CHOICE).
     fn apply_guards(&self, r: &Rules, out: &mut Vec<Move>, first: usize) {
         let them = 1 - self.side;
         let mut protected = 0u128;
@@ -1586,6 +1589,9 @@ impl Position {
             return;
         }
         let mut kept = first;
+        // The other Jesters' versions of captures two or more could take:
+        // added at the end, since the list is compacted in place.
+        let mut choices: Vec<Move> = Vec::new();
         for i in first..out.len() {
             let mut m = out[i];
             if m.flags & F_CAPTURE != 0 {
@@ -1595,9 +1601,14 @@ impl Position {
                 }
                 let ti = &r.info[kind_of(self.sq[cs])];
                 if !ti.is_pawn && !ti.is_king && !ti.decoy {
-                    if let Some(&(js, _)) = jesters.iter().find(|j| j.1 & (1u128 << cs) != 0) {
+                    let mut reaching = jesters.iter().filter(|j| j.1 & (1u128 << cs) != 0).map(|j| j.0);
+                    if let Some(js) = reaching.next() {
                         m.flags |= F_DECOY;
                         m.extra = js as u8;
+                        for other in reaching {
+                            m.flags |= F_CHOICE;
+                            choices.push(Move { flags: m.flags, extra: other as u8, ..m });
+                        }
                     }
                 }
             }
@@ -1605,6 +1616,7 @@ impl Position {
             kept += 1;
         }
         out.truncate(kept);
+        out.extend(choices);
     }
 
     fn gen_castling(&self, r: &Rules, king: usize, out: &mut Vec<Move>) {

@@ -236,6 +236,9 @@ impl Coverage {
             if all.iter().any(|m| m.flags & F_DECOY != 0) {
                 self.add("positions offering a Jester swap");
             }
+            if all.iter().any(|m| m.flags & F_CHOICE != 0) {
+                self.add("positions offering a choice of Jesters");
+            }
             // A Squire's protected piece that the side to move attacks.
             let them = 1 - p.side;
             let shielded_by_squire = p.squares(them).any(|s| {
@@ -284,6 +287,9 @@ impl Coverage {
         }
         if f & F_DECOY != 0 {
             self.add("played: Jester swap");
+        }
+        if f & F_CHOICE != 0 {
+            self.add("played: a chosen Jester (of two or more)");
         }
         if f & F_SHIELD != 0 && before.sq[m.to as usize] & GAINED != 0 {
             self.add("played: gained shield broken");

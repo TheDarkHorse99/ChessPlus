@@ -101,22 +101,13 @@ const KNOWN_ABILITIES := PieceDef.Ability.FULL_MOON
 ## newer special ability gets no eval bar until Plusfish is updated for it.
 ## (Plusfish knows Mac's Oct 2026 changes too: a Parapet stops only the
 ## opponent's pieces, a Squire protects Knights anywhere in its move pattern
-## even through pieces, and the Berserker's L-moves go 2 then 1.)
-## Plusfish doesn't know yet that the attacker chooses which Jester takes a hit
-## when more than one could (Mac, Oct 2026), so it's off when a side starts with
-## two Jesters. (A second one made by promotion later is rare: Plusfish can't
-## read that game's choice moves, so the eval bar stops there and the Plusfish
-## bot hands over to Hard.)
+## even through pieces, the Berserker's L-moves go 2 then 1, and when more than
+## one Jester could take a hit the attacker chooses which: "c7xe5/d4".)
 static func supports(state: GameState) -> bool:
 	for team in [Piece.Team.WHITE, Piece.Team.BLACK]:
-		var jesters := 0
 		for piece: Piece in state.board.pieces_of(team).values():
 			if piece.def.ability > KNOWN_ABILITIES:
 				return false
-			if piece.def.decoy:
-				jesters += 1
-		if jesters > 1:
-			return false
 	return true
 
 ## True if Plusfish can run here.

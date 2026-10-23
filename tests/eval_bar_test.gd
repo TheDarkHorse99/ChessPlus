@@ -514,6 +514,34 @@ func test_real_engine_knows_the_squire_and_berserker_rules() -> void:
 	link.free()
 	_finish()
 
+func test_real_engine_lets_the_attacker_choose_the_jester() -> void:
+	if PlusfishLink.program_path() == "" or OS.has_feature("web"):
+		print("    (Plusfish not built: cargo build --release in engine/plusfish to run this test)")
+		return
+	# Mac (Oct 2026): if more than one Jester could take the hit, the attacker
+	# chooses which, and the move names it ("c7xe5/f4"). Plusfish must read
+	# that to go on, and name its own best move the same way.
+	# TWO_JESTERS in third_batch_test.gd: the Bishop on c7 takes the Rook on e5,
+	# and the Jester on d4 or f4 takes the hit.
+	var start := Fen.parse("k7/2b5/8/4R3/3J1J2/8/8/7K b - - 0 1", PieceCatalog.all_defs(), StandardSetup.create_rules())
+	check(PlusfishLink.supports(start), "The eval bar works with two Jesters on a side")
+	var moves := ["c7xe5/f4", "h1-g1"]
+	PlusfishLink.enabled = true
+	var link := PlusfishLink.new()
+	_root().add_child(link)
+	link.desktop_nodes = 5000
+	link.analyse(start, moves)
+	for i in 2000:
+		if link.results.size() == moves.size() + 1:
+			break
+		await _frames(1)
+		OS.delay_msec(10)
+	check_eq(link.results.size(), moves.size() + 1, "Plusfish follows the capture taken by the f4 Jester")
+	var best := str(link.results.get(0, {}).get("best", ""))
+	check(start.find_move(best) != null, "Its best move at the start is one the game knows: " + best)
+	link.free()
+	_finish()
+
 # --- Plusfish never holds up the game ----------------------------------------------
 
 func test_bar_holds_its_place_while_waiting() -> void:
