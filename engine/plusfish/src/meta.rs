@@ -796,6 +796,10 @@ Every member pair plays --games games once (kept for later rounds).
                      steps 1-4 once for each colour. Both pools start from
                      --pool plus Standard. Writes <out>_white.txt and
                      <out>_black.txt (pool format).
+  --phase N          with --split-colours: grow one colour at a time, N rounds
+                     each, against the other pool frozen (White first), so each
+                     side settles against a fixed target instead of chasing a
+                     moving one (default 0: both colours every round).
 ";
 
 struct WideCfg {
@@ -1482,6 +1486,7 @@ pub fn run_split(cat: &Arc<Catalog>, params: &Params, args: &Args) {
     let cfg = wide_cfg(args);
     let rounds: usize = args.num("rounds", 8);
     let stable: usize = args.num("stable", 3);
+    let phase: usize = args.num("phase", 0);
     let exposed_wins = args.get("king-exposed").unwrap_or("win") != "reject";
     let out = args.get("out").unwrap_or("meta_pool.txt").to_string();
     let stem = out.trim_end_matches(".txt").to_string();
@@ -1523,8 +1528,9 @@ pub fn run_split(cat: &Arc<Catalog>, params: &Params, args: &Args) {
         start.iter().map(|(a, n)| Member { army: a.clone(), name: n.clone(), born: 0 }).collect(),
     ];
     log(format!(
-        "split-colours wide meta: {} climbers a colour a round ({} from members), {} tries a step at {} nodes; shortlist {}; games {} per pair at {} nodes, fixed colours; game climb {}; king exposed at the start = {}",
-        cfg.wide, cfg.refine, cfg.mutants, cfg.climb_nodes, cfg.shortlist, cfg.games, cfg.play.nodes, if cfg.game_climb { "on" } else { "off" }, if exposed_wins { "instant win" } else { "rejected" }
+        "split-colours wide meta: {} climbers a colour a round ({} from members), {} tries a step at {} nodes; shortlist {}; games {} per pair at {} nodes, fixed colours; game climb {}; king exposed at the start = {}; {}",
+        cfg.wide, cfg.refine, cfg.mutants, cfg.climb_nodes, cfg.shortlist, cfg.games, cfg.play.nodes, if cfg.game_climb { "on" } else { "off" }, if exposed_wins { "instant win" } else { "rejected" },
+        if phase > 0 { format!("phases of {} rounds, one colour at a time against the other pool frozen", phase) } else { "both colours every round".to_string() }
     ));
     let t0 = std::time::Instant::now();
     {
@@ -1541,7 +1547,9 @@ pub fn run_split(cat: &Arc<Catalog>, params: &Params, args: &Args) {
     let mut quiet = 0;
     for round in 1..=rounds {
         let mut changed = false;
-        for side in 0..2 {
+        // --phase: only one colour grows this round; the other pool stays as it is.
+        let sides: Vec<usize> = if phase > 0 { vec![((round - 1) / phase) % 2] } else { vec![0, 1] };
+        for side in sides {
             let white = side == 0;
             let t0 = std::time::Instant::now();
             let opp: Vec<Army> = pools[1 - side].iter().map(|m| m.army.clone()).collect();
