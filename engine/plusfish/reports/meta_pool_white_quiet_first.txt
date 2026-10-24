@@ -1,0 +1,13 @@
+# Chess Plus army pool grown by `plusfish meta --wide` (wide eval-guided climbs; games decide who stays).
+# After round 15. Games = mean score against the rest of the pool (40 games per pair, 6000 nodes per move); eval = mean turn-0 advantage at 20000 nodes (cp).
+# army | name | cost | games (Elo) | eval | pieces
+1Q(BR)KCG1(NC)/BEB(AS)(AS)AG(PD) | Wide 15a | 39 | 57.8% (+54) | +122 | Queen, Archer, Cannon, Necromancer, 2 Bishop, 2 Ghost, Barbarian, Paladin, Elephant, 2 Assassin
+P1(AS)1K(AS)P(NC)/B(GA)N(SQ)(RM)ABQ | Wide 11a | 39 | 57.5% (+53) | -53 | Queen, Archer, Squire, Necromancer, 2 Bishop, Galleon, Knight, Ram, 2 Pawn, 2 Assassin
+2(CV)K(NC)(WW)B1/Q(AS)(BR)(GA)(CV)GEA | Wide 7c | 39 | 53.6% (+25) | -33 | Queen, Archer, Necromancer, Bishop, 2 Cavalry, Galleon, Ghost, Werewolf, Barbarian, Elephant, Assassin
+(WW)QBKC2(CV)/1(BR)ABG(CV)P1 | Wide 14a | 39 | 51.8% (+13) | -15 | Queen, Archer, Cannon, 2 Bishop, 2 Cavalry, Ghost, Werewolf, Barbarian, Pawn
+AA(BR)QK(CV)2/(AS)B1(RM)(CV)(BR)G(AS) | Wide 9b | 39 | 51.0% (+7) | +125 | Queen, 2 Archer, Bishop, 2 Cavalry, Ghost, Ram, 2 Barbarian, 2 Assassin
+1PBK1(NC)Q1/A1(AS)GG(SQ)AB | Wide 9c | 39 | 50.1% (+1) | +32 | Queen, 2 Archer, Squire, Necromancer, 2 Bishop, 2 Ghost, Pawn, Assassin
+EQ(RO)K(WW)(AS)1(NC)/BGB(RM)G(PD)(PD)(AS) | Wide 4c | 39 | 47.6% (-16) | -17 | Queen, Necromancer, Rogue, 2 Bishop, 2 Ghost, Ram, Werewolf, 2 Paladin, Elephant, 2 Assassin
+(NC)(WW)ENKQPA/GB(AS)(CV)PG1(AS) | Wide 14a | 39 | 46.1% (-27) | -40 | Queen, Archer, Necromancer, Bishop, Cavalry, 2 Ghost, Knight, Werewolf, Elephant, 2 Pawn, 2 Assassin
+1PPK(BR)C(NC)1/A(AS)(WW)(BR)GBQ(PD) | Wide 4b | 39 | 44.0% (-42) | -75 | Queen, Archer, Cannon, Necromancer, Bishop, Ghost, Werewolf, 2 Barbarian, Paladin, 2 Pawn, Assassin
+QE(WW)1KN(NC)(RM)/(AS)APB(BR)(PD)G(AS) | Wide 15a | 39 | 40.4% (-67) | -46 | Queen, Archer, Necromancer, Bishop, Ghost, Knight, Ram, Werewolf, Barbarian, Paladin, Elephant, Pawn, 2 Assassin
