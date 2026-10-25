@@ -92,6 +92,7 @@ fn outcome_code(o: Outcome) -> i64 {
         Outcome::Repetition => 4,
         Outcome::Insufficient => 5,
         Outcome::KingExposed => 6,
+        Outcome::SeventyFiveMoves => 7,
     }
 }
 

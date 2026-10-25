@@ -15,6 +15,8 @@ pub const KW_JUMP: u8 = 1;
 pub const KW_CASTLE: u8 = 2;
 pub const KW_PROMOTE: u8 = 4;
 pub const KW_SHIELD: u8 = 8;
+/// Wall (Oct 2026): the opponent's pieces can't jump over it (`blocks_jumps`).
+pub const KW_WALL: u8 = 16;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mode {
@@ -570,7 +572,12 @@ pub fn parse_piece_tres(text: &str) -> Result<PieceDef, String> {
             "symbol" => def.symbol = unquote(v),
             "value" => def.value = v.trim().parse().unwrap_or(0.0),
             "types" => def.types = parse_int(v) as u8,
-            "keywords" => def.keywords = parse_int(v) as u8,
+            "keywords" => {
+                def.keywords = parse_int(v) as u8;
+                if def.keywords & KW_WALL != 0 {
+                    def.blocks_jumps = true;
+                }
+            }
             "ability" => def.ability = Ability::from_code(parse_int(v)),
             "dies_on_capture" => def.dies_on_capture = parse_bool(v),
             "blocks_jumps" => def.blocks_jumps = parse_bool(v),

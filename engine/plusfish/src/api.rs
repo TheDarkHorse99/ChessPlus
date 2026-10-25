@@ -97,7 +97,7 @@ pub fn catalog_from_json(j: &Json) -> Result<Catalog, String> {
         def.keywords = num(p, "keywords", 0.0) as u8;
         def.ability = Ability::from_code(num(p, "ability", 0.0) as i32);
         def.dies_on_capture = flag(p, "dies_on_capture");
-        def.blocks_jumps = flag(p, "blocks_jumps");
+        def.blocks_jumps = flag(p, "blocks_jumps") || def.keywords & KW_WALL != 0;
         def.shield_on_capture = flag(p, "shield_on_capture");
         def.decoy = flag(p, "decoy");
         def.protects = p.get("protects").and_then(|v| v.as_arr()).map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()).unwrap_or_default();

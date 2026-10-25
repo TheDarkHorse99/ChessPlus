@@ -685,6 +685,10 @@ pub struct Position {
     pub ep_victim: u8,
     pub halfmove: u32,
     pub fullmove: u32,
+    /// Plies since the pieces on the board last changed (`GameState.change_clock`):
+    /// a capture or shield break, a promotion, Raise Dead, Haunt or Full Moon
+    /// reset it; pawn moves don't. 150 is a draw (Mac's 75-move rule, Oct 2026).
+    pub unchanged: u32,
     /// Lost pieces per team, as counts per kind (the kind each started the
     /// game as: a lost wolf counts as a Werewolf).
     pub lost: [[u8; MAX_KINDS]; 2],
@@ -713,6 +717,8 @@ pub enum Outcome {
     /// Before the first move, the side NOT to move has its king attacked (some
     /// army pairings): that side loses (the game's temporary rule).
     KingExposed,
+    /// 150 plies with no change to the pieces on the board (Mac, Oct 2026).
+    SeventyFiveMoves,
 }
 
 impl Outcome {
@@ -752,6 +758,7 @@ impl Position {
             ep_victim: NO_SQ,
             halfmove: 0,
             fullmove: 1,
+            unchanged: 0,
             lost: [[0; MAX_KINDS]; 2],
             ghosts: [0; 2],
             ghost_n: [0; 2],
@@ -1715,6 +1722,11 @@ impl Position {
         } else {
             self.halfmove += 1;
         }
+        if m.is_capture() || m.flags & F_SHIELD != 0 || m.promo != 0 {
+            self.unchanged = 0;
+        } else {
+            self.unchanged += 1;
+        }
         if m.flags & F_CRACK != 0 {
             self.remove(r, from);
             c |= USED | if abilities_need_move() { MOVED } else { 0 };
@@ -1802,6 +1814,11 @@ impl Position {
         let to = m.to as usize;
         self.ep = 0;
         self.ep_victim = NO_SQ;
+        if m.flags & F_SONG != 0 {
+            self.unchanged += 1;
+        } else {
+            self.unchanged = 0;
+        }
         if m.flags & F_HAUNT != 0 {
             // A lost Ghost comes back, its Haunt used.
             let g = m.extra as usize;
@@ -2018,6 +2035,9 @@ impl Position {
         }
         if self.halfmove >= 100 {
             return Outcome::FiftyMoves;
+        }
+        if self.unchanged >= 150 {
+            return Outcome::SeventyFiveMoves;
         }
         if repetitions(keys, self.halfmove as usize) >= 3 {
             return Outcome::Repetition;
