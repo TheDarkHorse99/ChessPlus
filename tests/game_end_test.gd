@@ -120,3 +120,78 @@ func test_a_board_changed_by_hand_is_a_new_position() -> void:
 	state.board.set_piece(Board.parse_square("a2"), null)
 	_play(state, ["g1-f3", "g8-f6", "f3-g1", "f6-g8"])
 	check_eq(state.outcome(), Outcome.NONE, "Not the same as before the pawn went")
+
+## Mac's 75-move rule (Oct 2026): 150 plies with no change to the pieces on
+## the board is a draw. Pawn moves don't reset it (they do reset the 50-move
+## clock); captures, shield breaks, promotions, Raise Dead, Haunt and Full
+## Moon do.
+func test_seventy_five_moves() -> void:
+	var state := StandardSetup.from_fen("4k3/8/8/8/8/8/4P3/R3K3 w - - 0 60 unchanged=148")
+	check_eq(state.change_clock, 148, "FEN carries the count")
+	_play(state, ["e2-e3"])
+	check_eq(state.halfmove_clock, 0, "A pawn move resets the 50-move clock")
+	check_eq(state.change_clock, 149, "...but not the 75-move count")
+	check_eq(state.outcome(), Outcome.NONE, "149 plies")
+	_play(state, ["e8-e7"])
+	check_eq(state.outcome(), Outcome.SEVENTY_FIVE_MOVES, "150 plies without a change to the pieces")
+	check_eq(state.result_text(), "1/2-1/2", "A draw")
+	check_eq(Fen.write(state), "8/4k3/8/8/8/4P3/8/R3K3 w - - 1 61 unchanged=150", "FEN writes the count when it differs")
+	state.undo_move(state.history.back())
+	check_eq(state.change_clock, 149, "Undo restores the count")
+	check_eq(state.outcome(), Outcome.NONE, "Not over after the undo")
+
+func test_checkmate_beats_seventy_five_moves() -> void:
+	var state := StandardSetup.from_fen("7k/8/6K1/8/8/8/8/R7 w - - 10 80 unchanged=149")
+	_play(state, ["a1-a8"])
+	check_eq(state.outcome(), Outcome.CHECKMATE, "Mate on the 150th ply")
+
+func test_plain_fen_has_no_count() -> void:
+	var state := StandardSetup.from_fen("4k3/8/8/8/8/8/8/R3K3 w - - 7 60")
+	check_eq(state.change_clock, 7, "Left out, the count equals the halfmove clock")
+	check_eq(Fen.write(state), "4k3/8/8/8/8/8/8/R3K3 w - - 7 60", "...and isn't written")
+
+func _parse_all(fen: String) -> GameState:
+	return Fen.parse(fen, PieceCatalog.all_defs(), StandardSetup.create_rules())
+
+func test_what_resets_the_seventy_five_move_count() -> void:
+	var state := _parse_all("4k3/6P1/8/8/8/3r4/8/R3K3 w - - 0 1 unchanged=40")
+	_play(state, ["a1-a2", "d3-d4"])
+	check_eq(state.change_clock, 42, "Quiet moves add one each")
+	_play(state, ["g7-g8=N"])
+	check_eq(state.change_clock, 0, "A promotion resets it")
+	_play(state, ["d4-d2", "a2xd2"])
+	check_eq(state.change_clock, 0, "A capture resets it")
+	state.undo_move(state.history.back())
+	check_eq(state.change_clock, 1, "Undo puts the count back")
+	# A shield break (the attacker stays put).
+	state = _parse_all("4k3/8/8/8/8/(pd)7/8/R3K3 w - - 0 1 unchanged=30")
+	_play(state, ["a1xa3"])
+	check_eq(state.change_clock, 0, "A shield break resets it")
+	# Raise Dead.
+	state = _parse_all("4k3/8/8/8/8/8/8/(NC)3K3 w - - 0 1 unchanged=30")
+	state.lost[Piece.Team.WHITE].append(Piece.new(load("res://data/pieces/archer.tres"), Piece.Team.WHITE))
+	_play(state, ["a1!=A"])
+	check_eq(state.change_clock, 0, "Raise Dead resets it")
+	# Haunt (a lost Ghost that had moved).
+	state = _parse_all("4k3/8/8/8/8/8/8/4K3 w - - 0 1 unchanged=30")
+	var ghost := Piece.new(load("res://data/pieces/ghost.tres"), Piece.Team.WHITE)
+	ghost.has_moved = true
+	state.lost[Piece.Team.WHITE].append(ghost)
+	_play(state, ["@e4"])
+	check_eq(state.change_clock, 0, "Haunt resets it")
+	# Full Moon.
+	state = _parse_all("4k3/8/8/8/8/8/8/(WW)3K3 w - - 0 1 unchanged=30")
+	var moon: Array = state.moves().filter(func(m: Move) -> bool: return m.ability == PieceDef.Ability.FULL_MOON)
+	check_eq(moon.size(), 1, "The Werewolf can transform")
+	state.make_move(moon[0])
+	check_eq(state.change_clock, 0, "Full Moon resets it")
+	# Song of Slumber changes nothing on the board.
+	state = _parse_all("4k3/8/8/8/8/2r5/8/(BD)3K3 w - - 0 1 unchanged=30")
+	var song: Array = state.moves().filter(func(m: Move) -> bool: return m.ability == PieceDef.Ability.SONG_OF_SLUMBER)
+	check(not song.is_empty(), "The Bard can sing to the rook")
+	state.make_move(song[0])
+	check_eq(state.change_clock, 31, "Song of Slumber doesn't reset it")
+	# Castling doesn't either.
+	state = _parse_all("4k3/8/8/8/8/8/8/R3K3 w Q - 0 1 unchanged=30")
+	_play(state, ["e1-c1"])
+	check_eq(state.change_clock, 31, "Castling doesn't reset it")

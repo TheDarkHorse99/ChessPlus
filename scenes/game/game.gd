@@ -1341,6 +1341,8 @@ func _update_text() -> void:
 			status_label.text = "Draw by stalemate"
 		GameState.Outcome.FIFTY_MOVES:
 			status_label.text = "Draw by the 50-move rule"
+		GameState.Outcome.SEVENTY_FIVE_MOVES:
+			status_label.text = "Draw by the 75-move rule"
 		GameState.Outcome.REPETITION:
 			status_label.text = "Draw by repetition"
 		GameState.Outcome.INSUFFICIENT_MATERIAL:
@@ -1925,6 +1927,8 @@ func result_texts() -> Array:
 			return ["Draw", "Stalemate: no legal moves, but not in check"]
 		GameState.Outcome.FIFTY_MOVES:
 			return ["Draw", "50 moves each without a capture or pawn move"]
+		GameState.Outcome.SEVENTY_FIVE_MOVES:
+			return ["Draw", "75 moves each without a change to the pieces"]
 		GameState.Outcome.REPETITION:
 			return ["Draw", "The same position three times"]
 		GameState.Outcome.INSUFFICIENT_MATERIAL:

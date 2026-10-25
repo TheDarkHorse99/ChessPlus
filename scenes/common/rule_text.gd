@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Rule texts with light markup (Mac, Oct 2026): on the piece cards and in the
 ## army builder every piece type (King, Royal, Pawn) is in italics and every
-## keyword (Jump, Castle, Promote, Shield) sits in its coloured box, inline.
+## keyword (Jump, Castle, Promote, Shield, Wall) sits in its coloured box, inline.
 ## In the source text (piece files, PieceCard.EXPLANATIONS, Army.problems):
 ##   *King*     -> King in italics
 ##   {Shield}   -> SHIELD in the Shield keyword's box
@@ -18,6 +18,7 @@ const KEYWORD_COLORS := {
 	"Castle": [Color("#8C8C8C"), Color.WHITE],
 	"Promote": [Color("#7B4BC9"), Color.WHITE],
 	"Shield": [Color("#8FD0F5"), Color("#0B2A3D")],
+	"Wall": [Color("#9C7B5A"), Color("#2B1A0E")],
 }
 
 const ITALIC_FONT := preload("res://art/fonts/OpenSans-Italic.ttf")

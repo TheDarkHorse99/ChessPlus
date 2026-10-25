@@ -33,6 +33,9 @@ func test_keywords() -> void:
 	check_eq(PieceCard.keyword_names(_def("rook")), PackedStringArray(["Castle"]), "Rook")
 	check_eq(PieceCard.keyword_names(_def("lance")), PackedStringArray(["Promote"]), "Lance")
 	check_eq(PieceCard.keyword_names(_def("paladin")), PackedStringArray(["Shield"]), "Paladin")
+	check_eq(PieceCard.keyword_names(_def("parapet")), PackedStringArray(["Castle", "Wall"]), "Parapet: the Wall keyword (Oct 2026)")
+	check(_def("parapet").blocks_jumps() and not _def("paladin").blocks_jumps(), "Wall = blocks the opponent's jumps")
+	check_eq(RuleText.plain("{Wall}"), "WALL", "Wall has a box")
 	for def in PieceCatalog.all_defs():
 		for keyword in PieceCard.keyword_names(def):
 			check(PieceCard.KEYWORD_COLORS.has(keyword), keyword + " has a colour")

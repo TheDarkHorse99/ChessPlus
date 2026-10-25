@@ -10,7 +10,7 @@ extends RefCounted
 ## happen in the starting position (some army pairings leave Black's king
 ## attacked before White's first move). For now that side loses at once (Mac's
 ## temporary rule, Oct 2026; he'll design a real fix later).
-enum Outcome { NONE, CHECKMATE, STALEMATE, FIFTY_MOVES, REPETITION, INSUFFICIENT_MATERIAL, KING_EXPOSED }
+enum Outcome { NONE, CHECKMATE, STALEMATE, FIFTY_MOVES, REPETITION, INSUFFICIENT_MATERIAL, KING_EXPOSED, SEVENTY_FIVE_MOVES }
 
 var board: Board
 var rules: GameRules
@@ -21,6 +21,13 @@ var en_passant_squares: Array[Vector2i] = []
 var en_passant_victim: Vector2i = Board.NO_SQUARE
 ## Half-moves since the last capture or pawn-type move (100 = 50 moves each).
 var halfmove_clock: int = 0
+## Plies since the pieces on the board last changed: a capture (a shield
+## break, a Ram's death and a Crack Shot count), a promotion, Raise Dead, a
+## Ghost's Haunt return or a Werewolf's transformation. Pawn moves don't reset
+## it. 150 (75 moves each) is an automatic draw (Mac's rule, Oct 2026),
+## alongside the 50-move rule. FEN carries it as "unchanged=N" when it differs
+## from the halfmove clock.
+var change_clock: int = 0
 ## Starts at 1 and goes up after each Black move, as in FEN and PGN.
 var fullmove_number: int = 1
 ## Every move made so far, oldest first. undo_move takes the last one off.
@@ -54,7 +61,7 @@ var _moves_key := []
 ## What tells this position apart from others reached in the game, for keeping
 ## answers about it (see outcome() and moves()).
 func _position_now() -> Array:
-	return [_position_ids.back(), board.changes, side_to_move, halfmove_clock, lost[0].size(), lost[1].size()]
+	return [_position_ids.back(), board.changes, side_to_move, halfmove_clock, change_clock, lost[0].size(), lost[1].size()]
 
 ## `team`'s attack table: the lines its pieces can capture along (cached).
 func attack_table(team: Piece.Team) -> Array:
@@ -138,6 +145,8 @@ func _work_out_outcome() -> Outcome:
 		return Outcome.INSUFFICIENT_MATERIAL
 	if halfmove_clock >= 100:
 		return Outcome.FIFTY_MOVES
+	if change_clock >= 150:
+		return Outcome.SEVENTY_FIVE_MOVES
 	if _repetition_count() >= 3:
 		return Outcome.REPETITION
 	return Outcome.NONE
@@ -165,6 +174,11 @@ func make_move(move: Move) -> void:
 		halfmove_clock = 0
 	else:
 		halfmove_clock += 1
+	move.prev_change_clock = change_clock
+	if changes_pieces(move):
+		change_clock = 0
+	else:
+		change_clock += 1
 	history.append(move)
 	if move.ability != PieceDef.Ability.NONE:
 		move.piece.ability_used = true
@@ -269,6 +283,13 @@ func _next_turn() -> void:
 		fullmove_number += 1
 	side_to_move = Piece.other_team(side_to_move)
 
+## True if the move changes the pieces on the board (the 75-move rule's
+## count): any capture or shield break, a promotion, Raise Dead, Haunt or Full
+## Moon. A plain move, castling or Song of Slumber doesn't.
+static func changes_pieces(move: Move) -> bool:
+	return move.is_capture() or move.promotion != null \
+			or move.ability in [PieceDef.Ability.RAISE_DEAD, PieceDef.Ability.HAUNT, PieceDef.Ability.FULL_MOON]
+
 func undo_move(move: Move) -> void:
 	assert(not history.is_empty() and history.back() == move, "Moves must be undone last-first")
 	_position_ids.pop_back()
@@ -278,6 +299,7 @@ func undo_move(move: Move) -> void:
 func _take_back(move: Move) -> void:
 	history.pop_back()
 	halfmove_clock = move.prev_halfmove_clock
+	change_clock = move.prev_change_clock
 	side_to_move = Piece.other_team(side_to_move)
 	if side_to_move == Piece.Team.BLACK:
 		fullmove_number -= 1

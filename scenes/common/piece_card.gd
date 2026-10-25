@@ -27,6 +27,7 @@ const EXPLANATIONS := {
 	"Castle": "Your *King* can castle with it if neither has moved and it started in a corner of your back row.",
 	"Promote": "Must turn into another piece when it reaches the far end (any non-*Pawn*, non-*King* piece that started the game).",
 	"Shield": "The first capture only breaks its shield, and the attacker stays where it was.",
+	"Wall": "The opponent's pieces can't jump over it. Their Knights count as moving 2 squares straight, then 1. It's no screen for the opponent's Cannons. Your own pieces jump it freely.",
 	"Special Ability": "Once per game, after the piece has moved at least once (a capture or a shield break counts). Uses your turn.",
 }
 
@@ -200,6 +201,8 @@ static func keyword_names(p_def: PieceDef) -> PackedStringArray:
 		names.append("Promote")
 	if p_def.has_shield():
 		names.append("Shield")
+	if p_def.has_wall():
+		names.append("Wall")
 	return names
 
 ## Rules that the types, keywords and picture can't show (from the piece's data).

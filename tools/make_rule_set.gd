@@ -18,7 +18,7 @@ extends SceneTree
 ##                          (referee_test.ts) check it agrees
 
 const FOLDER := "res://server/supabase/functions/referee/"
-const OUTCOMES := ["none", "checkmate", "stalemate", "fifty_moves", "repetition", "insufficient_material", "king_exposed"]
+const OUTCOMES := ["none", "checkmate", "stalemate", "fifty_moves", "repetition", "insufficient_material", "king_exposed", "seventy_five_moves"]
 
 ## Army pairs to check, as army text (Plusfish's form: back row / front row,
 ## files a-h, two-letter symbols in brackets, digits for gaps), and whether

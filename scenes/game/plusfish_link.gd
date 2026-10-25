@@ -385,7 +385,7 @@ static func _def_to_dict(def: PieceDef) -> Dictionary:
 	return {
 		"id": def.id, "name": def.display_name, "symbol": def.symbol, "value": def.value,
 		"types": def.types, "keywords": def.keywords, "ability": def.ability,
-		"dies_on_capture": def.dies_on_capture, "blocks_jumps": def.blocks_jumps,
+		"dies_on_capture": def.dies_on_capture, "blocks_jumps": def.blocks_jumps(),
 		"shield_on_capture": def.shield_on_capture, "protects": def.protects, "decoy": def.decoy,
 		"transforms_into": def.transforms_into.id if def.transforms_into else null, "rules": rules,
 	}

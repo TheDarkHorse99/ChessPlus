@@ -6,7 +6,7 @@ extends Resource
 ## Bit values for `types`. A piece can have several, e.g. the king is KING + ROYAL.
 enum Type { KING = 1, ROYAL = 2, PAWN = 4 }
 ## Bit values for `keywords`.
-enum Keyword { JUMP = 1, CASTLE = 2, PROMOTE = 4, SHIELD = 8 }
+enum Keyword { JUMP = 1, CASTLE = 2, PROMOTE = 4, SHIELD = 8, WALL = 16 }
 
 @export var id: String = ""
 @export var display_name: String = ""
@@ -28,7 +28,7 @@ enum Keyword { JUMP = 1, CASTLE = 2, PROMOTE = 4, SHIELD = 8 }
 ## Promote: promotes on the far rank, with the same choices as pawns.
 ## Shield: must be captured twice. The first capture only breaks the shield (the
 ##   attacker stays where it is and uses its turn); the shield never comes back.
-@export_flags("Jump", "Castle", "Promote", "Shield") var keywords := 0
+@export_flags("Jump", "Castle", "Promote", "Shield", "Wall") var keywords := 0
 
 ## Once-per-game special abilities (each uses a turn).
 ## CRACK_SHOT (Archer): capture something it could capture, without moving.
@@ -54,11 +54,14 @@ enum Ability { NONE, CRACK_SHOT, RAISE_DEAD, HAUNT, SONG_OF_SLUMBER, FULL_MOON }
 ## board too, and counts as lost.
 @export var dies_on_capture := false
 
-## The Parapet's rule: the opponent's pieces can't jump over it (its own side's
-## can, Mac). Their leaps (Knight, Elephant, Catapult) and the Wizard's and
-## Rogue's leaps stop at it, and their Cannons can't use it as a screen. A
-## Knight counts as moving two squares straight first, then one to the side.
-@export var blocks_jumps := false
+## The Wall keyword's rule (the Parapet, and the Abatis from Oct 2026): the
+## opponent's pieces can't jump over it (its own side's can, Mac). Their leaps
+## (Knight, Elephant, Catapult) and the Wizard's and Rogue's leaps stop at it,
+## and their Cannons can't use it as a screen. A Knight counts as moving two
+## squares straight first, then one to the side. (It was a flag of its own,
+## `blocks_jumps`, until the keyword; Plusfish's data still calls it that.)
+func blocks_jumps() -> bool:
+	return has_wall()
 
 ## The Vampire's rule: it starts without a shield and gains one whenever it
 ## captures (if it hasn't one). The shield works like the Shield keyword's.
@@ -134,6 +137,9 @@ func has_promote() -> bool:
 
 func has_shield() -> bool:
 	return keywords & Keyword.SHIELD != 0
+
+func has_wall() -> bool:
+	return keywords & Keyword.WALL != 0
 
 ## Pawn types and pieces with the Promote keyword promote on the far rank.
 func can_promote() -> bool:

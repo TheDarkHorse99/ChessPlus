@@ -29,10 +29,11 @@ PIECES = {
     ]),
     # Batch 2 (rules in the engine: see PieceDef.blocks_jumps, shield_on_capture,
     # protects and decoy).
-    "parapet": dict(name="Parapet", symbol="PA", value=2.5, keywords=2, rules=[
+    # Keywords: 1 Jump, 2 Castle, 4 Promote, 8 Shield, 16 Wall.
+    "parapet": dict(name="Parapet", symbol="PA", value=2.5, keywords=2 | 16, rules=[
         ([(1, 0), (-1, 0)], 0, 0, {}),
         (DIAG, 1, 0, {}),
-    ], extra={"blocks_jumps": "true"},
+    ],
         special_rule="Enemy pieces can't jump over the Parapet."),
     "vampire": dict(name="Vampire", symbol="V", value=6.5, rules=[
         ([(1, 0), (-1, 0), (0, -1)], 0, 0, {}),

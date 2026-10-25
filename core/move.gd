@@ -30,6 +30,7 @@ var partner_to: Vector2i
 # Filled in by GameState.make_move so undo_move can put things back exactly.
 var piece_had_moved: bool
 var prev_halfmove_clock: int
+var prev_change_clock: int
 ## The new piece created by a promotion. Made once and reused if the move is
 ## replayed, so later moves that refer to it still find the same piece.
 var promoted_piece: Piece

@@ -221,13 +221,13 @@ static func blocker(state: GameState, from: Vector2i, to: Vector2i) -> Vector2i:
 	var parapets: Array[Vector2i] = []
 	var enemy_pieces := board.pieces_of(Piece.other_team(piece.team))
 	for square: Vector2i in enemy_pieces.keys():
-		if enemy_pieces[square].def.blocks_jumps and square != to:
+		if enemy_pieces[square].def.blocks_jumps() and square != to:
 			parapets.append(square)
 	for square in parapets:
 		var parapet := board.get_piece(square)
 		var real_def := parapet.def
 		var plain: PieceDef = real_def.duplicate()
-		plain.blocks_jumps = false
+		plain.keywords &= ~PieceDef.Keyword.WALL
 		for variant in [null, plain]:
 			if variant == null:
 				board.set_piece(square, null)
@@ -297,7 +297,7 @@ static func _leap_blocked(board: Board, from: Vector2i, step: Vector2i, team: Pi
 ## True if `piece` is a Parapet that stops `team`'s pieces jumping over it (it's
 ## on the other side).
 static func stops_jumps(piece: Piece, team: Piece.Team) -> bool:
-	return piece != null and piece.def.blocks_jumps and piece.team != team
+	return piece != null and piece.def.blocks_jumps() and piece.team != team
 
 ## A piece's special-ability moves. Crack Shot: a copy of each of its captures
 ## (from `first_new` on in `moves`) in which it doesn't move. Raise Dead: one move
