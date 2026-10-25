@@ -82,6 +82,7 @@ Common options: --threads N (games at once; default: all cores)  --pieces <Chess
                 --white-quiet-first=true (experiment: no captures or abilities on White's first move unless in check)
                 --abilities-need-move=true (experiment, run 14: a special ability needs a move first; a capture
                                   or shield break counts as a move; a Ghost captured unmoved can't Haunt)
+                --promote-needs-move=true (the game's rule, 25 Oct 2026: no promotion on a piece's first move)
                 --params <file> (evaluation weights; \"none\" = from army costs)
 ";
 
@@ -168,6 +169,10 @@ fn main() {
     if args.flag("abilities-need-move") {
         ABILITIES_NEED_MOVE.store(true, std::sync::atomic::Ordering::Relaxed);
         eprintln!("note: abilities need a move first (experiment, run 14): no special ability until the piece has moved; a capture or shield break counts");
+    }
+    if args.flag("promote-needs-move") {
+        PROMOTE_NEEDS_MOVE.store(true, std::sync::atomic::Ordering::Relaxed);
+        eprintln!("note: promotion needs a move first (the game's rule, 25 Oct 2026): a piece that has never moved stops on the far rank as it is");
     }
     let cmd = args.words.first().map(|s| s.as_str()).unwrap_or("help");
     if cmd == "enginematch" && args.flag("help") {

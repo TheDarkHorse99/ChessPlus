@@ -76,6 +76,16 @@ pub static WHITE_QUIET_FIRST: std::sync::atomic::AtomicBool = std::sync::atomic:
 /// `--abilities-need-move=true`.
 pub static ABILITIES_NEED_MOVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// The game's rule (Mac, 25 Oct 2026): a piece that has never moved can't
+/// promote; reaching the far rank on its first move it just stands there.
+/// Off unless a command is given `--promote-needs-move=true`.
+pub static PROMOTE_NEEDS_MOVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[inline(always)]
+fn promote_needs_move() -> bool {
+    PROMOTE_NEEDS_MOVE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 #[inline(always)]
 fn abilities_need_move() -> bool {
     ABILITIES_NEED_MOVE.load(std::sync::atomic::Ordering::Relaxed)
@@ -1383,7 +1393,9 @@ impl Position {
 
     #[inline(always)]
     fn push(&self, r: &Rules, kind: usize, us: usize, m: Move, out: &mut Vec<Move>) {
-        if r.info[kind].can_promote && m.flags & F_SHIELD == 0 && !r.promo.is_empty() && r.rank(m.to as usize) == r.far_rank(us) {
+        if r.info[kind].can_promote && m.flags & F_SHIELD == 0 && !r.promo.is_empty() && r.rank(m.to as usize) == r.far_rank(us)
+            && (!promote_needs_move() || self.sq[m.from as usize] & MOVED != 0)
+        {
             for &p in &r.promo {
                 let mut pm = m;
                 pm.promo = p + 1;
@@ -1444,7 +1456,7 @@ impl Position {
             let c = self.sq[from];
             let k = kind_of(c);
             let info = r.info[k];
-            let promo_quiet = mode == GEN_TACTICAL && info.can_promote && !r.promo.is_empty();
+            let promo_quiet = mode == GEN_TACTICAL && info.can_promote && !r.promo.is_empty() && (!promote_needs_move() || c & MOVED != 0);
             let first_new = out.len();
             let moved = c & MOVED != 0;
             for ray in r.rays_of(k, us, from) {
@@ -1585,10 +1597,9 @@ impl Position {
         if r.guards != 0 {
             self.apply_guards(r, out, first);
         }
+        // The game's rule (Mac, 25 Oct 2026) has no "unless in check" exception.
         let quiet = QUIET_FIRST_MOVE.load(std::sync::atomic::Ordering::Relaxed)
-            || (self.side == WHITE
-                && WHITE_QUIET_FIRST.load(std::sync::atomic::Ordering::Relaxed)
-                && !self.in_check(r, WHITE));
+            || (self.side == WHITE && WHITE_QUIET_FIRST.load(std::sync::atomic::Ordering::Relaxed));
         if self.fullmove == 1 && quiet {
             let mut i = first;
             while i < out.len() {
