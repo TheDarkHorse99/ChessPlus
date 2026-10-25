@@ -75,6 +75,8 @@ like \"RNBQKBNR/PPPPPPPP\" (back row / front row, files a-h, two-letter symbols
 in brackets: \"R(CV)B(W)KB(CV)R/PPPPPPPP\").
 
 Common options: --threads N (games at once; default: all cores)  --pieces <ChessPlus/data/pieces>
+                --quiet-first-move=true (experiment: no captures or abilities on either side's first move)
+                --white-quiet-first=true (experiment: no captures or abilities on White's first move unless in check)
                 --params <file> (evaluation weights; \"none\" = from army costs)
 ";
 
@@ -150,6 +152,14 @@ fn pv_san(g: &Game, pv: &[Move]) -> String {
 fn main() {
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let args = Args::parse(&raw);
+    if args.flag("quiet-first-move") {
+        QUIET_FIRST_MOVE.store(true, std::sync::atomic::Ordering::Relaxed);
+        eprintln!("note: quiet first move (experiment): no captures or abilities on either side's first move");
+    }
+    if args.flag("white-quiet-first") {
+        WHITE_QUIET_FIRST.store(true, std::sync::atomic::Ordering::Relaxed);
+        eprintln!("note: White-only quiet first move (experiment): no captures or abilities on White's first move unless in check");
+    }
     let cmd = args.words.first().map(|s| s.as_str()).unwrap_or("help");
     if cmd == "enginematch" && args.flag("help") {
         print!("{}", ematch::HELP);
@@ -565,7 +575,7 @@ fn main() {
                 eprintln!("warning: a king starts in check in this pairing (White could capture Black's king).");
             }
             println!("A: {}  ({} points)\nB: {}  ({} points)", a.to_text(&cat, 8), a.cost(&cat), b.to_text(&cat, 8), b.cost(&cat));
-            println!("{} games, {} nodes per move, {} threads, A and B swap colours each game", games, cfg.nodes, threads(&args));
+            println!("{} games, {} nodes per move, {} threads, {}", games, cfg.nodes, threads(&args), if args.flag("fixed-colours") { "A plays White in every game" } else { "A and B swap colours each game" });
             let tally = Mutex::new([0f64; 3]);
             let progress = |rec: &GameRecord, n: usize| {
                 let a_score = if rec.a_is_white { rec.result } else { 1.0 - rec.result };
@@ -577,6 +587,8 @@ fn main() {
                 }
             };
             let random_armies = args.get("armies") == Some("random");
+            // Experiment (Mac, Oct 2026): A plays White in every game.
+            let fixed_colours = args.flag("fixed-colours");
             let seed: u64 = args.num("seed", 1);
             let pair = |i: usize, _rng: &mut Rng| -> (Army, Army, bool) {
                 let (w, bl) = if random_armies {
@@ -586,7 +598,7 @@ fn main() {
                 } else {
                     (a.clone(), b.clone())
                 };
-                if i % 2 == 0 {
+                if i % 2 == 0 || fixed_colours {
                     (w, bl, true)
                 } else if random_armies {
                     (w, bl, false)

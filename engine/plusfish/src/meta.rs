@@ -789,6 +789,21 @@ Every member pair plays --games games once (kept for later rounds).
                      win for White, as in the game now (default), or reject
                      such armies (the old meta behaviour)
   --pool <file> --out <file> --threads N (default 16) --seed N --name X
+  --split-colours    experiment (Mac, Oct 2026): grow a White pool and a Black
+                     pool side by side instead of one pool. A White army is
+                     judged only by its eval and games as White against the
+                     Black pool, and the other way round; each round does
+                     steps 1-4 once for each colour. Both pools start from
+                     --pool plus Standard. Writes <out>_white.txt and
+                     <out>_black.txt (pool format).
+  --phase N          with --split-colours: grow one colour at a time, N rounds
+                     each, against the other pool frozen (White first), so each
+                     side settles against a fixed target instead of chasing a
+                     moving one (default 0: both colours every round).
+  --fixed-opponent   with --split-colours: judge each colour against the
+                     starting pool (--pool plus Standard) frozen for the whole
+                     run, never against the other colour pool, so the two
+                     searches are independent and nothing cycles (run 13).
 ";
 
 struct WideCfg {
@@ -999,11 +1014,11 @@ fn game_climb(cat: &Arc<Catalog>, sc: &Scorer, book: &GameBook, start: Army, poo
     cur
 }
 
-pub fn run_wide(cat: &Arc<Catalog>, params: &Params, args: &Args) {
+fn wide_cfg(args: &Args) -> WideCfg {
     let mut play = PlayConfig::default();
     play.nodes = args.num("game-nodes", 6_000);
     play.random_plies = args.num("random-plies", 6);
-    let cfg = WideCfg {
+    WideCfg {
         threads: args.num("threads", 16),
         nodes: args.num("nodes", 20_000),
         climb_nodes: args.num("climb-nodes", 3_000),
@@ -1023,7 +1038,14 @@ pub fn run_wide(cat: &Arc<Catalog>, params: &Params, args: &Args) {
         gc_steps: args.num("gc-steps", 10),
         replace_margin: args.get("replace-margin").map(|s| s.parse().unwrap()).unwrap_or(0.02),
         max: args.num("max", 10),
-    };
+    }
+}
+
+pub fn run_wide(cat: &Arc<Catalog>, params: &Params, args: &Args) {
+    if args.flag("split-colours") {
+        return run_split(cat, params, args);
+    }
+    let cfg = wide_cfg(args);
     let rounds: usize = args.num("rounds", 8);
     let stable: usize = args.num("stable", 3);
     let exposed_wins = args.get("king-exposed").unwrap_or("win") != "reject";
@@ -1230,4 +1252,446 @@ pub fn run_wide(cat: &Arc<Catalog>, params: &Params, args: &Args) {
         }
     }
     log(format!("wrote {}", out));
+}
+
+// --- meta --wide --split-colours: a White pool and a Black pool ----------------
+
+/// `a`'s turn-0 score (cp, from its own side) playing `white` (true) or Black
+/// against `o`. None = a broken start.
+fn side_score(sc: &Scorer, a: &Army, white: bool, o: &Army, nodes: u64) -> Option<f64> {
+    if white {
+        sc.start_score(a, o, nodes).map(|v| v as f64)
+    } else {
+        sc.start_score(o, a, nodes).map(|v| -(v as f64))
+    }
+}
+
+/// `a`'s mean turn-0 score as that colour against every army in `opp`.
+fn side_mean(sc: &Scorer, a: &Army, white: bool, opp: &[Army], nodes: u64) -> Option<f64> {
+    let mut sum = 0.0;
+    for o in opp {
+        sum += side_score(sc, a, white, o, nodes)?;
+    }
+    Some(sum / opp.len().max(1) as f64)
+}
+
+/// Works out (and caches) the turn-0 score of every (White, Black) pairing
+/// in `jobs`, on `threads` threads.
+fn warm(sc: &Scorer, jobs: &[(&Army, &Army)], nodes: u64, threads: usize) {
+    let next = AtomicUsize::new(0);
+    std::thread::scope(|scope| {
+        for _ in 0..threads.max(1) {
+            scope.spawn(|| loop {
+                let j = next.fetch_add(1, Ordering::SeqCst);
+                if j >= jobs.len() {
+                    break;
+                }
+                sc.start_score(jobs[j].0, jobs[j].1, nodes);
+            });
+        }
+    });
+}
+
+/// The (White, Black) pairings for `armies` playing `white` against `opp`.
+fn side_pairs<'b>(armies: &'b [Army], white: bool, opp: &'b [Army]) -> Vec<(&'b Army, &'b Army)> {
+    let mut v = Vec::new();
+    for a in armies {
+        for o in opp {
+            v.push(if white { (a, o) } else { (o, a) });
+        }
+    }
+    v
+}
+
+/// A hill climb for one colour (as climb_one, judged only as that colour).
+fn climb_side(cat: &Catalog, sc: &Scorer, start: Army, white: bool, opp: &[Army], nodes: u64, mutants: usize, patience: usize, rng: &mut Rng) -> (Army, f64) {
+    let mut cur = start;
+    let mut cur_score = side_mean(sc, &cur, white, opp, nodes).unwrap_or(-1e9);
+    let (mut fails, mut steps) = (0, 0);
+    while fails < patience && steps < 100 {
+        steps += 1;
+        let mut best: Option<(Army, f64)> = None;
+        for _ in 0..mutants {
+            if let Some(m) = mutate(cat, &cur, rng) {
+                if let Some(s) = side_mean(sc, &m, white, opp, nodes) {
+                    if best.as_ref().map(|b| s > b.1).unwrap_or(true) {
+                        best = Some((m, s));
+                    }
+                }
+            }
+        }
+        match best {
+            Some((m, s)) if s > cur_score + 0.5 => {
+                cur = m;
+                cur_score = s;
+                fails = 0;
+            }
+            _ => fails += 1,
+        }
+    }
+    (cur, cur_score)
+}
+
+/// Game results with fixed colours: (White army, Black army) -> White's
+/// points and games played.
+struct ColourBook<'a> {
+    cat: &'a Arc<Catalog>,
+    params: &'a Params,
+    play: PlayConfig,
+    threads: usize,
+    table: HashMap<(String, String), (f64, usize)>,
+}
+
+impl<'a> ColourBook<'a> {
+    /// Plays `n` games for each (White, Black) pair, all in parallel; pair i's
+    /// game k uses seed `seed + i * 1000 + k`. Returns White's points per pair.
+    fn play(&self, pairs: &[(&Army, &Army)], n: usize, seed: u64) -> Vec<f64> {
+        let jobs: Vec<(usize, usize)> = (0..pairs.len()).flat_map(|i| (0..n).map(move |k| (i, k))).collect();
+        let points: Vec<Mutex<f64>> = pairs.iter().map(|_| Mutex::new(0.0)).collect();
+        let next = AtomicUsize::new(0);
+        std::thread::scope(|scope| {
+            for _ in 0..self.threads.max(1) {
+                scope.spawn(|| loop {
+                    let j = next.fetch_add(1, Ordering::SeqCst);
+                    if j >= jobs.len() {
+                        break;
+                    }
+                    let (i, k) = jobs[j];
+                    let (w, bl) = pairs[i];
+                    let rec = play_game(self.cat, w, bl, self.params, self.params, true, &self.play, seed + i as u64 * 1000 + k as u64);
+                    *points[i].lock().unwrap() += rec.result as f64;
+                });
+            }
+        });
+        points.into_iter().map(|m| m.into_inner().unwrap()).collect()
+    }
+
+    fn key(&self, w: &Army, b: &Army) -> (String, String) {
+        (w.to_text(self.cat, 8), b.to_text(self.cat, 8))
+    }
+
+    /// White's mean score when `w` plays `b` (None if they haven't played).
+    fn white_score(&self, w: &Army, b: &Army) -> Option<f64> {
+        self.table.get(&self.key(w, b)).filter(|e| e.1 > 0).map(|e| e.0 / e.1 as f64)
+    }
+
+    /// Plays whatever games are missing so every White army has `n` games
+    /// against every Black army.
+    fn fill(&mut self, whites: &[&Army], blacks: &[&Army], n: usize, seed: u64) {
+        let mut todo: Vec<(&Army, &Army, usize)> = Vec::new();
+        for w in whites {
+            for b in blacks {
+                let have = self.table.get(&self.key(w, b)).map(|e| e.1).unwrap_or(0);
+                if have < n {
+                    todo.push((*w, *b, n - have));
+                }
+            }
+        }
+        let mut counts: Vec<usize> = todo.iter().map(|t| t.2).collect();
+        counts.sort();
+        counts.dedup();
+        for c in counts {
+            let pairs: Vec<(&Army, &Army)> = todo.iter().filter(|t| t.2 == c).map(|t| (t.0, t.1)).collect();
+            let pts = self.play(&pairs, c, seed);
+            for (p, x) in pairs.iter().zip(pts) {
+                let k = self.key(p.0, p.1);
+                let e = self.table.entry(k).or_insert((0.0, 0));
+                e.0 += x;
+                e.1 += c;
+            }
+        }
+    }
+
+    /// `a`'s mean score playing `white` (or Black) against `opp` (pairs not
+    /// played count as 0.5).
+    fn mean(&self, a: &Army, white: bool, opp: &[&Army]) -> f64 {
+        if opp.is_empty() {
+            return 0.5;
+        }
+        opp.iter()
+            .map(|o| if white { self.white_score(a, o) } else { self.white_score(o, a).map(|s| 1.0 - s) }.unwrap_or(0.5))
+            .sum::<f64>()
+            / opp.len() as f64
+    }
+}
+
+/// Polishes `start` for one colour with games against `opp` (as game_climb).
+fn game_climb_side(cat: &Arc<Catalog>, sc: &Scorer, book: &ColourBook, start: Army, white: bool, opp: &[Army], cfg: &WideCfg, rng: &mut Rng, seed: u64, log: &dyn Fn(String)) -> Army {
+    let mut cur = start;
+    let mut fails = 0;
+    for step in 0..cfg.gc_steps {
+        if fails >= cfg.gc_patience {
+            break;
+        }
+        let mut tweaks: Vec<(Army, f64)> = (0..12)
+            .filter_map(|_| mutate(cat, &cur, rng))
+            .filter_map(|m| side_mean(sc, &m, white, opp, cfg.climb_nodes).map(|s| (m, s)))
+            .collect();
+        tweaks.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        tweaks.dedup_by(|a, b| a.0.pieces == b.0.pieces);
+        let mut armies = vec![cur.clone()];
+        armies.extend(tweaks.into_iter().take(cfg.gc_mutants).map(|t| t.0));
+        let n = cfg.gc_games * 2;
+        let mut pts = vec![0.0; armies.len()];
+        for (ai, a) in armies.iter().enumerate() {
+            let pairs: Vec<(&Army, &Army)> = opp.iter().map(|o| if white { (a, o) } else { (o, a) }).collect();
+            let v = book.play(&pairs, n, seed + step as u64 * 100_000);
+            let white_pts: f64 = v.iter().sum();
+            let total = (n * opp.len()) as f64;
+            pts[ai] = if white { white_pts / total } else { 1.0 - white_pts / total };
+        }
+        let best = (1..armies.len()).max_by(|&a, &b| pts[a].partial_cmp(&pts[b]).unwrap());
+        match best {
+            Some(i) if pts[i] >= pts[0] + cfg.gc_margin => {
+                log(format!("    game climb step {}: {:.1}% -> {:.1}% with {}", step + 1, 100.0 * pts[0], 100.0 * pts[i], armies[i].to_text(cat, 8)));
+                cur = armies[i].clone();
+                fails = 0;
+            }
+            _ => {
+                log(format!("    game climb step {}: no tweak beat {:.1}% (best {:.1}%)", step + 1, 100.0 * pts[0], best.map(|i| 100.0 * pts[i]).unwrap_or(0.0)));
+                fails += 1;
+            }
+        }
+    }
+    cur
+}
+
+fn side_name(white: bool) -> &'static str {
+    if white { "White" } else { "Black" }
+}
+
+/// Each member's game score as its colour against the other pool.
+fn split_standings(book: &ColourBook, own: &[Member], white: bool, opp: &[Member]) -> Vec<f64> {
+    let refs: Vec<&Army> = opp.iter().map(|m| &m.army).collect();
+    own.iter().map(|m| book.mean(&m.army, white, &refs)).collect()
+}
+
+fn write_split(cat: &Catalog, sc: &Scorer, book: &ColourBook, path: &str, own: &[Member], white: bool, opp: &[Member], round: usize, cfg: &WideCfg) -> String {
+    let g = split_standings(book, own, white, opp);
+    let own_armies: Vec<Army> = own.iter().map(|m| m.army.clone()).collect();
+    let opp_armies: Vec<Army> = opp.iter().map(|m| m.army.clone()).collect();
+    warm(sc, &side_pairs(&own_armies, white, &opp_armies), cfg.nodes, cfg.threads);
+    let mut s = String::new();
+    s += &format!("# Chess Plus {} armies grown by `plusfish meta --wide --split-colours` (judged only as {} against the {} pool).\n", side_name(white), side_name(white), side_name(!white));
+    s += &format!("# After round {}. Games = mean score as {} against the {} pool ({} games per pair, {} nodes per move); eval = mean turn-0 advantage as {} at {} nodes (cp).\n", round, side_name(white), side_name(!white), cfg.games, cfg.play.nodes, side_name(white), cfg.nodes);
+    s += "# army | name | cost | games (Elo) | eval | pieces\n";
+    let mut order: Vec<usize> = (0..own.len()).collect();
+    order.sort_by(|&a, &b| g[b].partial_cmp(&g[a]).unwrap());
+    for i in order {
+        let m = &own[i];
+        let e = side_mean(sc, &m.army, white, &opp_armies, cfg.nodes).unwrap_or(f64::NAN);
+        s += &format!("{} | {} | {} | {:.1}% ({:+.0}) | {:+.0} | {}\n", m.army.to_text(cat, 8), m.name, m.army.cost(cat), 100.0 * g[i], elo_of(g[i]), e, pieces_text(cat, &m.army));
+    }
+    std::fs::write(path, &s).unwrap_or_else(|e| panic!("{}: {}", path, e));
+    own.iter().zip(&g).map(|(m, x)| format!("{} {:+.0}", m.name, elo_of(*x))).collect::<Vec<_>>().join(", ")
+}
+
+pub fn run_split(cat: &Arc<Catalog>, params: &Params, args: &Args) {
+    let cfg = wide_cfg(args);
+    let rounds: usize = args.num("rounds", 8);
+    let stable: usize = args.num("stable", 3);
+    let phase: usize = args.num("phase", 0);
+    let fixed_opp = args.flag("fixed-opponent");
+    let exposed_wins = args.get("king-exposed").unwrap_or("win") != "reject";
+    let out = args.get("out").unwrap_or("meta_pool.txt").to_string();
+    let stem = out.trim_end_matches(".txt").to_string();
+    let paths = [format!("{}_white.txt", stem), format!("{}_black.txt", stem)];
+    let prefix = args.get("name").unwrap_or("Wide").to_string();
+    let seed: u64 = args.num("seed", 1u64);
+    let mut rng = Rng::new(seed);
+    let logf = Mutex::new(std::fs::File::create(format!("{}.log", stem)).ok());
+    let log = |s: String| {
+        println!("{}", s);
+        if let Some(f) = logf.lock().unwrap().as_mut() {
+            writeln!(f, "{}", s).ok();
+            f.flush().ok();
+        }
+    };
+    let sc = Scorer { cat, params, cache: Mutex::new(HashMap::new()), exposed_wins };
+    let mut book = ColourBook { cat, params, play: cfg.play.clone(), threads: cfg.threads, table: HashMap::new() };
+
+    // Both pools start from the same armies: Standard plus --pool.
+    let mut start: Vec<(Army, String)> = vec![(standard(cat), "Standard".into())];
+    if let Some(p) = args.get("pool") {
+        let mut l = |s: String| log(s);
+        start.extend(read_pool(cat, p, &mut l));
+    }
+    if !exposed_wins {
+        let mut i = 1;
+        while i < start.len() {
+            if (0..i).any(|j| start_is_broken(&army_game(cat, &start[i].0, &start[j].0, 8, 8)) || start_is_broken(&army_game(cat, &start[j].0, &start[i].0, 8, 8))) {
+                log(format!("left out {}: a king is attacked at the start against another member", start[i].1));
+                start.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+    }
+    // pools[0] = White armies, pools[1] = Black armies.
+    let mut pools: [Vec<Member>; 2] = [
+        start.iter().map(|(a, n)| Member { army: a.clone(), name: n.clone(), born: 0 }).collect(),
+        start.iter().map(|(a, n)| Member { army: a.clone(), name: n.clone(), born: 0 }).collect(),
+    ];
+    // --fixed-opponent: both colours are judged against this, the starting pool, all run long.
+    let frozen: Vec<Member> = start.iter().map(|(a, n)| Member { army: a.clone(), name: n.clone(), born: 0 }).collect();
+    log(format!(
+        "split-colours wide meta: {} climbers a colour a round ({} from members), {} tries a step at {} nodes; shortlist {}; games {} per pair at {} nodes, fixed colours; game climb {}; king exposed at the start = {}; {}",
+        cfg.wide, cfg.refine, cfg.mutants, cfg.climb_nodes, cfg.shortlist, cfg.games, cfg.play.nodes, if cfg.game_climb { "on" } else { "off" }, if exposed_wins { "instant win" } else { "rejected" },
+        if fixed_opp { "each colour judged against the starting pool, frozen for the whole run".to_string() } else if phase > 0 { format!("phases of {} rounds, one colour at a time against the other pool frozen", phase) } else { "both colours every round".to_string() }
+    ));
+    let t0 = std::time::Instant::now();
+    {
+        let w: Vec<&Army> = pools[0].iter().map(|m| &m.army).collect();
+        let b: Vec<&Army> = pools[1].iter().map(|m| &m.army).collect();
+        if fixed_opp {
+            let f: Vec<&Army> = frozen.iter().map(|m| &m.army).collect();
+            book.fill(&w, &f, cfg.games, seed * 7_919);
+            book.fill(&f, &b, cfg.games, seed * 7_919);
+        } else {
+            book.fill(&w, &b, cfg.games, seed * 7_919);
+        }
+    }
+    log(format!("starting pools played out ({:.0}s)", t0.elapsed().as_secs_f64()));
+    for side in 0..2 {
+        let line = write_split(cat, &sc, &book, &paths[side], &pools[side], side == 0, if fixed_opp { &frozen[..] } else { &pools[1 - side][..] }, 0, &cfg);
+        log(format!("  {} pool (game Elo): {}", side_name(side == 0), line));
+    }
+
+    let mut quiet = 0;
+    for round in 1..=rounds {
+        let mut changed = false;
+        // --phase: only one colour grows this round; the other pool stays as it is.
+        let sides: Vec<usize> = if phase > 0 { vec![((round - 1) / phase) % 2] } else { vec![0, 1] };
+        for side in sides {
+            let white = side == 0;
+            let t0 = std::time::Instant::now();
+            let opp: Vec<Army> = (if fixed_opp { &frozen[..] } else { &pools[1 - side][..] }).iter().map(|m| m.army.clone()).collect();
+            // 1. Climb wide, judged as this colour against the other pool.
+            let mut starts: Vec<Army> = Vec::new();
+            for _ in 0..cfg.refine.min(pools[side].len()) {
+                starts.push(pools[side][rng.below(pools[side].len())].army.clone());
+            }
+            while starts.len() < cfg.wide {
+                let a = random_army(cat, &mut rng);
+                if a.cost(cat) >= 36.0 {
+                    starts.push(a);
+                }
+            }
+            let finished: Vec<Mutex<Option<(Army, f64)>>> = starts.iter().map(|_| Mutex::new(None)).collect();
+            let next = AtomicUsize::new(0);
+            let round_seed = rng.below(1 << 30) as u64;
+            std::thread::scope(|scope| {
+                for _ in 0..cfg.threads.max(1) {
+                    scope.spawn(|| loop {
+                        let i = next.fetch_add(1, Ordering::SeqCst);
+                        if i >= starts.len() {
+                            break;
+                        }
+                        let mut r = Rng::new(round_seed * 1_000 + i as u64 + 1);
+                        let res = climb_side(cat, &sc, starts[i].clone(), white, &opp, cfg.climb_nodes, cfg.mutants, cfg.patience, &mut r);
+                        *finished[i].lock().unwrap() = Some(res);
+                    });
+                }
+            });
+            let mut climbed: Vec<Army> = finished.into_iter().filter_map(|m| m.into_inner().unwrap()).map(|r| r.0).collect();
+            climbed.sort_by_key(|a| a.to_text(cat, 8));
+            climbed.dedup_by(|a, b| a.pieces == b.pieces);
+            // 2. Shortlist at the eval bar's budget.
+            warm(&sc, &side_pairs(&climbed, white, &opp), cfg.nodes, cfg.threads);
+            let mut ranked: Vec<(usize, f64)> = (0..climbed.len()).filter_map(|i| side_mean(&sc, &climbed[i], white, &opp, cfg.nodes).map(|s| (i, s))).collect();
+            ranked.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+            let mut shortlist: Vec<Army> = Vec::new();
+            for &(i, _) in &ranked {
+                if shortlist.len() >= cfg.shortlist {
+                    break;
+                }
+                if shortlist.iter().all(|s| pieces_apart(s, &climbed[i]) > 0 || squares_apart(s, &climbed[i]) > 0) {
+                    shortlist.push(climbed[i].clone());
+                }
+            }
+            log(format!(
+                "round {} {}: {} climbs ({:.0}s); best by eval: {}",
+                round,
+                side_name(white),
+                climbed.len(),
+                t0.elapsed().as_secs_f64(),
+                ranked.iter().take(cfg.shortlist).map(|&(i, s)| format!("{:+.0} {}", s, climbed[i].to_text(cat, 8))).collect::<Vec<_>>().join(", ")
+            ));
+            // 3. Game climb on the best.
+            if cfg.game_climb && !shortlist.is_empty() {
+                let polished = game_climb_side(cat, &sc, &book, shortlist[0].clone(), white, &opp, &cfg, &mut rng, round_seed * 31 + 7, &log);
+                if polished.pieces != shortlist[0].pieces {
+                    shortlist.insert(0, polished);
+                    shortlist.truncate(cfg.shortlist);
+                }
+            }
+            // 4. Games decide, against the other pool with fixed colours.
+            for (ci, cand) in shortlist.iter().enumerate() {
+                {
+                    let opp_refs: Vec<&Army> = (if fixed_opp { &frozen[..] } else { &pools[1 - side][..] }).iter().map(|m| &m.army).collect();
+                    let me = [cand];
+                    if white {
+                        book.fill(&me, &opp_refs, cfg.games, round_seed * 7 + ci as u64 * 13 + 3);
+                    } else {
+                        book.fill(&opp_refs, &me, cfg.games, round_seed * 7 + ci as u64 * 13 + 3);
+                    }
+                }
+                let (cand_score, near, apart, near_score) = {
+                    let opp_refs: Vec<&Army> = (if fixed_opp { &frozen[..] } else { &pools[1 - side][..] }).iter().map(|m| &m.army).collect();
+                    let cand_score = book.mean(cand, white, &opp_refs);
+                    let (near, apart) = (0..pools[side].len()).map(|i| (i, pieces_apart(cand, &pools[side][i].army))).min_by_key(|&(i, d)| (d, squares_apart(cand, &pools[side][i].army))).unwrap();
+                    (cand_score, near, apart, book.mean(&pools[side][near].army, white, &opp_refs))
+                };
+                let near_name = pools[side][near].name.clone();
+                let name = format!("{} {}{}{}", prefix, if white { "W" } else { "B" }, round, ["a", "b", "c", "d", "e", "f"].get(ci).unwrap_or(&""));
+                if apart >= cfg.min_diff {
+                    log(format!("  {} {} scores {:.1}% ({:+.0} Elo) as {} against the {} pool, {} pieces from the nearest ({}): joins as {}", side_name(white), cand.to_text(cat, 8), 100.0 * cand_score, elo_of(cand_score), side_name(white), side_name(!white), apart, near_name, name));
+                    pools[side].push(Member { army: cand.clone(), name: name.clone(), born: round });
+                    let mut joined = true;
+                    while pools[side].len() > cfg.max {
+                        let g = split_standings(&book, &pools[side], white, if fixed_opp { &frozen[..] } else { &pools[1 - side][..] });
+                        let worst = (0..pools[side].len()).min_by(|&a, &b| g[a].partial_cmp(&g[b]).unwrap()).unwrap();
+                        log(format!("  {} pool over {}: drops {} ({:.1}%)", side_name(white), cfg.max, pools[side][worst].name, 100.0 * g[worst]));
+                        if pools[side][worst].name == name {
+                            joined = false;
+                        }
+                        pools[side].remove(worst);
+                    }
+                    changed |= joined;
+                } else {
+                    let m = near_score;
+                    if cand_score > m + cfg.replace_margin {
+                        log(format!("  {} {} is only {} pieces from {} and scores better against the {} pool ({:.1}% vs {:.1}%): replaces it as {}", side_name(white), cand.to_text(cat, 8), apart, near_name, side_name(!white), 100.0 * cand_score, 100.0 * m, name));
+                        pools[side][near] = Member { army: cand.clone(), name, born: round };
+                        changed = true;
+                    } else {
+                        log(format!("  {} {} is only {} pieces from {} and doesn't score better against the {} pool ({:.1}% vs {:.1}%): thrown away", side_name(white), cand.to_text(cat, 8), apart, near_name, side_name(!white), 100.0 * cand_score, 100.0 * m));
+                    }
+                }
+            }
+            log(format!("  round {} {} took {:.0}s", round, side_name(white), t0.elapsed().as_secs_f64()));
+        }
+        // Every White army has played every Black army before the pools are written.
+        {
+            let w: Vec<&Army> = pools[0].iter().map(|m| &m.army).collect();
+            let b: Vec<&Army> = pools[1].iter().map(|m| &m.army).collect();
+            if fixed_opp {
+                let f: Vec<&Army> = frozen.iter().map(|m| &m.army).collect();
+                book.fill(&w, &f, cfg.games, seed * 7_919 + round as u64);
+                book.fill(&f, &b, cfg.games, seed * 7_919 + round as u64);
+            } else {
+                book.fill(&w, &b, cfg.games, seed * 7_919 + round as u64);
+            }
+        }
+        for side in 0..2 {
+            let line = write_split(cat, &sc, &book, &paths[side], &pools[side], side == 0, if fixed_opp { &frozen[..] } else { &pools[1 - side][..] }, round, &cfg);
+            log(format!("  {} pool (game Elo): {}", side_name(side == 0), line));
+        }
+        quiet = if changed { 0 } else { quiet + 1 };
+        if quiet >= stable {
+            log(format!("stable: no change for {} rounds", quiet));
+            break;
+        }
+    }
+    log(format!("wrote {} and {}", paths[0], paths[1]));
 }

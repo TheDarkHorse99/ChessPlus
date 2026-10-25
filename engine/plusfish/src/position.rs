@@ -55,6 +55,19 @@ pub const F_DECOY: u16 = 1024;
 /// Every special-ability move.
 pub const F_ABILITY: u16 = F_CRACK | F_RAISE | F_HAUNT | F_SONG | F_MOON;
 
+/// Experiment (Mac, Oct 2026), not a game rule: "Quiet first move": neither
+/// side may capture (or break a shield) or use a special ability on its
+/// first move (fullmove 1). Off unless a command is given
+/// `--quiet-first-move=true`.
+pub static QUIET_FIRST_MOVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Experiment (Mac, Oct 2026, balance run 9), not a game rule: "White-only
+/// quiet first move": White may not capture (or break a shield) or use a
+/// special ability on its first move (fullmove 1), unless White is in check.
+/// Black's first move is unrestricted. Off unless a command is given
+/// `--white-quiet-first=true`.
+pub static WHITE_QUIET_FIRST: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 pub const GEN_ALL: u8 = 0;
 pub const GEN_CAPTURES: u8 = 1;
 pub const GEN_TACTICAL: u8 = 2;
@@ -1550,6 +1563,21 @@ impl Position {
         }
         if r.guards != 0 {
             self.apply_guards(r, out, first);
+        }
+        let quiet = QUIET_FIRST_MOVE.load(std::sync::atomic::Ordering::Relaxed)
+            || (self.side == WHITE
+                && WHITE_QUIET_FIRST.load(std::sync::atomic::Ordering::Relaxed)
+                && !self.in_check(r, WHITE));
+        if self.fullmove == 1 && quiet {
+            let mut i = first;
+            while i < out.len() {
+                let m = out[i];
+                if m.is_capture() || m.flags & (F_EP | F_ABILITY) != 0 {
+                    out.swap_remove(i);
+                } else {
+                    i += 1;
+                }
+            }
         }
     }
 
