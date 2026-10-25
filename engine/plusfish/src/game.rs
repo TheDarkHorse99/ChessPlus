@@ -539,9 +539,7 @@ pub fn fen(p: &Position, r: &Rules, with_extras: bool) -> String {
         p.halfmove,
         p.fullmove
     );
-    if p.unchanged != p.halfmove {
-        out += &format!(" unchanged={}", p.unchanged);
-    }
+    // The 75-move count ("unchanged=N") is read but, like the game's Fen.write, not written.
     if with_extras {
         let mut lost = String::new();
         for team in 0..2 {
