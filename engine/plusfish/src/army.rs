@@ -12,7 +12,7 @@ use crate::position::*;
 use crate::util::Rng;
 use std::sync::Arc;
 
-pub const BUDGET: f64 = 39.0;
+pub const BUDGET: f64 = 40.0;
 pub const START_ROWS: i32 = 2;
 pub const MAX_COPIES: usize = 2;
 pub const MAX_EXTRA_ROYALS: usize = 1;

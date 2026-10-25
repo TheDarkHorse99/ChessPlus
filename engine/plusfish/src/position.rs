@@ -68,6 +68,19 @@ pub static QUIET_FIRST_MOVE: std::sync::atomic::AtomicBool = std::sync::atomic::
 /// `--white-quiet-first=true`.
 pub static WHITE_QUIET_FIRST: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// Experiment (Mac, 24 Oct 2026, balance run 14): the game's new rule that a
+/// special ability can't be used until the piece has moved at least once
+/// (`Piece.can_use_ability`). A capture or a shield break counts as a move
+/// even when the piece stays where it was (Crack Shot included), and a Ghost
+/// captured before it ever moved can't Haunt. Off unless a command is given
+/// `--abilities-need-move=true`.
+pub static ABILITIES_NEED_MOVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[inline(always)]
+fn abilities_need_move() -> bool {
+    ABILITIES_NEED_MOVE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 pub const GEN_ALL: u8 = 0;
 pub const GEN_CAPTURES: u8 = 1;
 pub const GEN_TACTICAL: u8 = 2;
@@ -781,7 +794,8 @@ impl Position {
         self.add_lost(r, team, k as usize, 1);
         if k == r.haunt_kind && self.ghost_n[team] < 16 {
             let n = self.ghost_n[team];
-            let bits = self.ghosts[team] | if c & USED == 0 { 1 << n } else { 0 };
+            let can_haunt = c & USED == 0 && (c & MOVED != 0 || !abilities_need_move());
+            let bits = self.ghosts[team] | if can_haunt { 1 << n } else { 0 };
             self.set_ghosts(team, bits, n + 1);
         }
     }
@@ -1515,7 +1529,7 @@ impl Position {
             if !tactical_only && info.is_king && !moved {
                 self.gen_castling(r, from, out);
             }
-            if c & USED == 0 {
+            if c & USED == 0 && (c & MOVED != 0 || !abilities_need_move()) {
                 match info.ability {
                     Ability::CrackShot => {
                         let end = out.len();
@@ -1703,7 +1717,7 @@ impl Position {
         }
         if m.flags & F_CRACK != 0 {
             self.remove(r, from);
-            c |= USED;
+            c |= USED | if abilities_need_move() { MOVED } else { 0 };
             self.put(r, from, c);
         }
         self.ep = 0;
@@ -1715,6 +1729,10 @@ impl Position {
             if r.info[k].dies {
                 self.remove(r, from);
                 self.lose(r, us, c);
+            } else if abilities_need_move() && c & MOVED == 0 {
+                // Breaking a shield counts as the attacker's move (the ability rule).
+                self.remove(r, from);
+                self.put(r, from, c | MOVED);
             }
             self.next_turn(r);
             return;

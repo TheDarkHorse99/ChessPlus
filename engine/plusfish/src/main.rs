@@ -69,6 +69,9 @@ Checking the rules against the game
   perft         --fen \"<fen>\" --depth N [--divide]
   perft-suite   standard-chess positions with known counts
   trace-games / trace-check   cross-check against the game's GDScript engine
+  first-moves   games.jsonl...   one JSON line per game: White's first move, its kind
+                (capture / shield / ability / quiet), the mover, the target, whether
+                Black could hit the mover back and whether it did (balance run 14)
 
 Armies: \"standard\", \"random\", \"random:<seed>\", a saved .tres army file, or text
 like \"RNBQKBNR/PPPPPPPP\" (back row / front row, files a-h, two-letter symbols
@@ -77,6 +80,8 @@ in brackets: \"R(CV)B(W)KB(CV)R/PPPPPPPP\").
 Common options: --threads N (games at once; default: all cores)  --pieces <ChessPlus/data/pieces>
                 --quiet-first-move=true (experiment: no captures or abilities on either side's first move)
                 --white-quiet-first=true (experiment: no captures or abilities on White's first move unless in check)
+                --abilities-need-move=true (experiment, run 14: a special ability needs a move first; a capture
+                                  or shield break counts as a move; a Ghost captured unmoved can't Haunt)
                 --params <file> (evaluation weights; \"none\" = from army costs)
 ";
 
@@ -159,6 +164,10 @@ fn main() {
     if args.flag("white-quiet-first") {
         WHITE_QUIET_FIRST.store(true, std::sync::atomic::Ordering::Relaxed);
         eprintln!("note: White-only quiet first move (experiment): no captures or abilities on White's first move unless in check");
+    }
+    if args.flag("abilities-need-move") {
+        ABILITIES_NEED_MOVE.store(true, std::sync::atomic::Ordering::Relaxed);
+        eprintln!("note: abilities need a move first (experiment, run 14): no special ability until the piece has moved; a capture or shield break counts");
     }
     let cmd = args.words.first().map(|s| s.as_str()).unwrap_or("help");
     if cmd == "enginematch" && args.flag("help") {
@@ -438,6 +447,13 @@ fn main() {
                 .unwrap_or_default();
             let text = verify::write_trace_games(&cat, args.num("count", 50), args.num("seed", 1), args.num("plies", 300), &favor);
             print!("{}", text);
+        }
+        "first-moves" => {
+            // One JSON line per saved game: White's first move and what it hit (balance run 14).
+            for path in &args.words[1..] {
+                let text = std::fs::read_to_string(path).unwrap_or_else(|e| die(&e.to_string()));
+                print!("{}", verify::first_move_facts(&cat, path, &text));
+            }
         }
         "trace-check" => {
             let games = std::fs::read_to_string(&args.words[1]).unwrap_or_else(|e| die(&e.to_string()));

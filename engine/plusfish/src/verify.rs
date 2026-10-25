@@ -299,3 +299,76 @@ impl Coverage {
         }
     }
 }
+
+/// One JSON line per game of a saved game file (`selfplay` / `match --out`):
+/// White's first move, its kind, the piece that made it, the piece it hit,
+/// whether the move gave check, whether Black could then capture (or break the
+/// shield of) the mover where it stood ("recapturable"), and whether Black's
+/// actual reply did ("recaptured"). `stands` is false when the mover left the
+/// board itself (a Ram). Balance run 14's move-1 tally.
+pub fn first_move_facts(cat: &Arc<Catalog>, label: &str, games_text: &str) -> String {
+    let q = crate::json::quote;
+    let games = crate::report::read_games(cat, games_text);
+    let mut out = String::new();
+    for (i, sg) in games.iter().enumerate() {
+        let mut g = army_game(cat, &sg.white, &sg.black, 8, 8);
+        let r = g.rules.clone();
+        let mut kind = "none";
+        let (mut first, mut mover, mut target) = (String::new(), String::new(), String::new());
+        let (mut check, mut recapturable, mut recaptured, mut stands) = (false, false, false, false);
+        if let Some(text) = sg.moves.first() {
+            if let Some(m) = find_move(&g.pos, &r, text) {
+                first = text.clone();
+                let from = m.from as usize;
+                let mover_kind = if m.flags & F_HAUNT != 0 { m.extra as usize } else { kind_of(g.pos.sq[from]) };
+                mover = cat.defs[mover_kind].id.clone();
+                kind = if m.flags & F_ABILITY != 0 {
+                    "ability"
+                } else if m.flags & F_SHIELD != 0 {
+                    "shield"
+                } else if m.is_capture() {
+                    "capture"
+                } else {
+                    "quiet"
+                };
+                let target_sq = if m.flags & F_DECOY != 0 {
+                    Some(m.extra as usize)
+                } else if m.flags & F_SONG != 0 {
+                    Some(m.to as usize)
+                } else if m.is_capture() || m.flags & F_SHIELD != 0 {
+                    Some(m.capture_square() as usize)
+                } else {
+                    None
+                };
+                if let Some(s) = target_sq {
+                    let c = g.pos.sq[s];
+                    if c != 0 {
+                        target = cat.defs[kind_of(c)].id.clone();
+                    }
+                }
+                if m.flags & F_RAISE != 0 {
+                    target = cat.defs[m.extra as usize].id.clone();
+                }
+                // Where the mover stands afterwards: abilities and shield breaks leave it put.
+                let at = if m.flags & (F_ABILITY | F_SHIELD) != 0 { from } else { m.to as usize };
+                g.play(m);
+                check = g.pos.in_check(&r, g.pos.side);
+                stands = g.pos.sq[at] != 0 && team_of(g.pos.sq[at]) == WHITE;
+                let hits = |mm: &Move| (mm.is_capture() && mm.capture_square() as usize == at) || (mm.flags & F_SHIELD != 0 && mm.to as usize == at);
+                if stands {
+                    recapturable = g.pos.legal_moves(&r).iter().any(|mm| hits(mm));
+                    if let Some(reply) = sg.moves.get(1) {
+                        if let Some(rm) = find_move(&g.pos, &r, reply) {
+                            recaptured = hits(&rm);
+                        }
+                    }
+                }
+            }
+        }
+        out += &format!(
+            "{{\"file\":{},\"i\":{},\"result\":{},\"kind\":\"{}\",\"move\":{},\"mover\":{},\"target\":{},\"check\":{},\"stands\":{},\"recapturable\":{},\"recaptured\":{}}}\n",
+            q(label), i, sg.result, kind, q(&first), q(&mover), q(&target), check, stands, recapturable, recaptured
+        );
+    }
+    out
+}
