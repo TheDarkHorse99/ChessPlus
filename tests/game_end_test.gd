@@ -135,7 +135,8 @@ func test_seventy_five_moves() -> void:
 	_play(state, ["e8-e7"])
 	check_eq(state.outcome(), Outcome.SEVENTY_FIVE_MOVES, "150 plies without a change to the pieces")
 	check_eq(state.result_text(), "1/2-1/2", "A draw")
-	check_eq(Fen.write(state), "8/4k3/8/8/8/4P3/8/R3K3 w - - 1 61 unchanged=150", "FEN writes the count when it differs")
+	check_eq(Fen.write(state, true), "8/4k3/8/8/8/4P3/8/R3K3 w - - 1 61 unchanged=150", "FEN writes the count when asked and it differs")
+	check_eq(Fen.write(state), "8/4k3/8/8/8/4P3/8/R3K3 w - - 1 61", "...and not otherwise")
 	state.undo_move(state.history.back())
 	check_eq(state.change_clock, 149, "Undo restores the count")
 	check_eq(state.outcome(), Outcome.NONE, "Not over after the undo")
@@ -148,7 +149,7 @@ func test_checkmate_beats_seventy_five_moves() -> void:
 func test_plain_fen_has_no_count() -> void:
 	var state := StandardSetup.from_fen("4k3/8/8/8/8/8/8/R3K3 w - - 7 60")
 	check_eq(state.change_clock, 7, "Left out, the count equals the halfmove clock")
-	check_eq(Fen.write(state), "4k3/8/8/8/8/8/8/R3K3 w - - 7 60", "...and isn't written")
+	check_eq(Fen.write(state, true), "4k3/8/8/8/8/8/8/R3K3 w - - 7 60", "...and isn't written when equal")
 
 func _parse_all(fen: String) -> GameState:
 	return Fen.parse(fen, PieceCatalog.all_defs(), StandardSetup.create_rules())

@@ -19,7 +19,7 @@ Pawn 1, Knight 3, Bishop 3.5, Rook 4.5, Queen 10, King 0. Archer 4.5, Assassin
 0.5, Barbarian 2.5, Bard 3.5, Cannon 4, Catapult 3, Cavalry 3, Chariot 4,
 Elephant 1, Galleon 3, Ghost 3, Jester 3.5, Lance 3.5, Man 3, Necromancer 3.5,
 Paladin 1.5, Parapet 2.5, Princess 8.5, Ram 3, Rogue 3.5, Squire 4, Vampire 6.5,
-Werewolf 3.5, Wizard 8. **Budget 40** (was 39) since 24 Oct 2026, when Mac set
+Werewolf 3.5, Wizard 8; new on 25 Oct 2026, start prices to be measured in run 15: Grunt 1.5 (pawn type with a shield), Abatis 1 (pawn type that is a Wall), Vassal 1 (pawn type moving forward or sideways, takes en passant sideways). **Budget 40** (was 39) since 24 Oct 2026, when Mac set
 Queen 10, Bishop 3.5, Rook 4.5, Werewolf 3.5, Parapet 2.5 and Jester 3.5, and
 made special abilities usable only once the piece has moved (a capture or
 shield break counts). Runs 1-13 were at the old prices and rules; run 14

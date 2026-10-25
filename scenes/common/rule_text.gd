@@ -18,7 +18,7 @@ const KEYWORD_COLORS := {
 	"Castle": [Color("#8C8C8C"), Color.WHITE],
 	"Promote": [Color("#7B4BC9"), Color.WHITE],
 	"Shield": [Color("#8FD0F5"), Color("#0B2A3D")],
-	"Wall": [Color("#9C7B5A"), Color("#2B1A0E")],
+	"Wall": [Color("#B5442C"), Color.WHITE],
 }
 
 const ITALIC_FONT := preload("res://art/fonts/OpenSans-Italic.ttf")

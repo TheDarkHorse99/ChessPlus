@@ -21,4 +21,3 @@ symbol = "PA"
 value = 2.5
 move_rules = Array[ExtResource("1_rule")]([SubResource("Resource_rule1"), SubResource("Resource_rule2")])
 keywords = 18
-special_rule = "Enemy pieces can't jump over the Parapet."

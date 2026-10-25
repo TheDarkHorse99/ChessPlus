@@ -70,7 +70,7 @@ func test_no_taps_after_game_over() -> void:
 
 ## Pieces whose art hasn't been drawn yet (they show their letters meanwhile).
 ## Take each one off this list when its pictures are added.
-const ART_TO_COME: Array[String] = []
+const ART_TO_COME: Array[String] = ["grunt", "abatis", "vassal"]
 
 func test_every_piece_has_a_picture() -> void:
 	var view := BoardView.new()
@@ -85,7 +85,7 @@ func test_every_piece_has_a_picture() -> void:
 
 func test_shield_pieces_have_a_wounded_picture() -> void:
 	for def in PieceCatalog.all_defs():
-		if def.has_shield():
+		if def.has_shield() and def.id not in ART_TO_COME:
 			for team in [Piece.Team.WHITE, Piece.Team.BLACK]:
 				check(PieceArt.texture_for(def, team, PieceArt.DEFAULT_STYLE, "wounded") != null, "%s %s wounded" % [team, def.id])
 

@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="PieceDef" format=3]
+
+[ext_resource type="Script" path="res://core/move_rule.gd" id="1_rule"]
+[ext_resource type="Script" path="res://core/piece_def.gd" id="2_def"]
+
+[sub_resource type="Resource" id="Resource_rule1"]
+script = ExtResource("1_rule")
+directions = Array[Vector2i]([Vector2i(0, 1)])
+max_steps = 1
+first_move_max_steps = 2
+
+[sub_resource type="Resource" id="Resource_rule2"]
+script = ExtResource("1_rule")
+directions = Array[Vector2i]([Vector2i(0, -1)])
+max_steps = 1
+
+[resource]
+script = ExtResource("2_def")
+id = "abatis"
+display_name = "Abatis"
+symbol = "AB"
+value = 1
+move_rules = Array[ExtResource("1_rule")]([SubResource("Resource_rule1"), SubResource("Resource_rule2")])
+types = 4
+keywords = 16
+special_rule = "On its first move, the Abatis can move 2 squares forward."

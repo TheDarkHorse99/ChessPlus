@@ -22,12 +22,12 @@ const ITALIC_FONT := RuleText.ITALIC_FONT
 const EXPLANATIONS := {
 	"King": "If a *King* is checkmated, its side loses. Every army has exactly one, starting in the middle of the back row. It can castle.",
 	"Royal": "An army can have only one *Royal* piece besides its *King*.",
-	"Pawn": "Any number per army. It can capture, and be captured, en passant. Moving it resets the 50-move count.",
+	"Pawn": "Any number per army. It can take part in en passant.",
 	"Jump": "Leaps over pieces: the squares it jumps over can't block it.",
 	"Castle": "Your *King* can castle with it if neither has moved and it started in a corner of your back row.",
 	"Promote": "Must turn into another piece when it reaches the far end (any non-*Pawn*, non-*King* piece that started the game).",
 	"Shield": "The first capture only breaks its shield, and the attacker stays where it was.",
-	"Wall": "The opponent's pieces can't jump over it. Their Knights count as moving 2 squares straight, then 1. It's no screen for the opponent's Cannons. Your own pieces jump it freely.",
+	"Wall": "The opponent's pieces can't jump over it.",
 	"Special Ability": "Once per game, after the piece has moved at least once (a capture or a shield break counts). Uses your turn.",
 }
 

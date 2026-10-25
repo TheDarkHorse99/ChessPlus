@@ -6,9 +6,11 @@ extends RefCounted
 ##   pieces (top rank first, "/" between ranks, digits = that many empty squares)
 ##   side to move (w or b), castling rights (KQkq or -), en passant square (or -),
 ##   halfmove clock, move number.
-## Uppercase letters are White, lowercase are Black. Chess Plus adds, after the
-## six, "unchanged=N" (the 75-move rule's count of plies since the pieces last
-## changed) when it differs from the halfmove clock; left out, it's the same.
+## Uppercase letters are White, lowercase are Black. Chess Plus can add, after
+## the six, "unchanged=N" (the 75-move rule's count of plies since the pieces
+## last changed): parse() always reads it (left out, it equals the halfmove
+## clock); write() adds it only when asked (`with_count`), so FENs stay
+## standard text. Nothing keeps a game as FEN mid-game, so that's enough.
 
 const STANDARD_START := "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -43,7 +45,7 @@ static func parse(text: String, defs: Array[PieceDef], rules: GameRules) -> Game
 	return state
 
 ## The FEN text for a game state.
-static func write(state: GameState) -> String:
+static func write(state: GameState, with_count := false) -> String:
 	var board := state.board
 	var rows: PackedStringArray = []
 	for rank in range(board.height - 1, -1, -1):
@@ -73,7 +75,7 @@ static func write(state: GameState) -> String:
 		en_passant = Board.square_name(state.en_passant_squares[0])
 	var text := " ".join(["/".join(rows), side, _castling_text(board), en_passant,
 			str(state.halfmove_clock), str(state.fullmove_number)])
-	if state.change_clock != state.halfmove_clock:
+	if with_count and state.change_clock != state.halfmove_clock:
 		text += " unchanged=%d" % state.change_clock
 	return text
 

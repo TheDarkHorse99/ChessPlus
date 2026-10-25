@@ -33,8 +33,7 @@ PIECES = {
     "parapet": dict(name="Parapet", symbol="PA", value=2.5, keywords=2 | 16, rules=[
         ([(1, 0), (-1, 0)], 0, 0, {}),
         (DIAG, 1, 0, {}),
-    ],
-        special_rule="Enemy pieces can't jump over the Parapet."),
+    ]),
     "vampire": dict(name="Vampire", symbol="V", value=6.5, rules=[
         ([(1, 0), (-1, 0), (0, -1)], 0, 0, {}),
         ([(1, 1), (-1, 1)], 1, 0, {}),
@@ -67,6 +66,22 @@ PIECES = {
     ], ability=5, ability_name="Full Moon", colors=["#F5F2E3", "#8E959E"], glow=["#789EFF", "#283199"], transforms_into="forms/werewolf_wolf",
         extra={"form_name": '"Human"'},
         ability_text="The Werewolf transforms from human form into wolf form."),
+    # Mac's pawn types (25 Oct 2026; types 4 = Pawn): all promote, any number per
+    # army. The first-move double step may capture (Mac): one move-or-capture
+    # rule with first_move_max_steps 2. A Grunt or Abatis that double-steps can
+    # be taken en passant; neither can take en passant (they capture straight),
+    # the Vassal can (sideways onto the skipped square), all from the engine's
+    # general en passant rule for pawn types.
+    "grunt": dict(name="Grunt", symbol="GR", value=1.5, types=4, keywords=8, rules=[
+        ([(0, 1)], 1, 0, {"first_move_max_steps": 2}),
+    ], special_rule="On its first move, the Grunt can move 2 squares forward."),
+    "abatis": dict(name="Abatis", symbol="AB", value=1, types=4, keywords=16, rules=[
+        ([(0, 1)], 1, 0, {"first_move_max_steps": 2}),
+        ([(0, -1)], 1, 0, {}),
+    ], special_rule="On its first move, the Abatis can move 2 squares forward."),
+    "vassal": dict(name="Vassal", symbol="VS", value=1, types=4, rules=[
+        ([(0, 1), (1, 0), (-1, 0)], 1, 0, {}),
+    ]),
     # The Werewolf after Full Moon. Kept in forms/ so the army builder doesn't offer it.
     "werewolf_wolf": dict(name="Werewolf", symbol="WF", value=3.5, path="forms/werewolf_wolf", rules=[
         ([(1, 0), (-1, 0), (0, -1)], 1, 0, {}),
