@@ -1,6 +1,6 @@
 # Chess Plus balancing: briefing (for a chat that can't see the repo)
 
-Last updated 25 October 2026 (after runs 15 and 15D). The full data is in the repo
+Last updated 26 October 2026 (after run 16). The full data is in the repo
 (github.com/thedarkhorse99/ChessPlus): `balance/results/run1` to `run13` (a
 README and report each) and `CLAUDE.md`. All numbers below come from
 Plusfish, the game's own engine, playing itself: strong hints, not human play.
@@ -150,6 +150,14 @@ strong players score 54-56% with White. Plusfish rates the chess start +0.29.
   specialists 47.5% (Black slightly ahead), and White and Black stop needing
   different armies. Under that rule the Lance is worth only 2.8-3.1 (priced
   3.5) and the Rook and Queen gain about half a point.
+- **Run 16, the meta by share** (26 Oct, today's rules and prices): 40
+  all-round armies grown from scratch and 40 White-only + 40 Black-only
+  specialists, grouped into archetypes. It's a Vampire meta: a Vampire in
+  88-100% of armies (1.7 each), with Wizards, Archers, Jesters and the new
+  1-point Vassal as the filler; the family "2 Vampires + Jester + Vassals"
+  is 50% of all-rounders, 65% of White and 88% of Black specialists. White's
+  and Black's specialist pools look the same. The Vampire (6.5, measured
+  worth 7.0-7.3 in every run) is the obvious next price question.
 
 ## Other open questions
 
