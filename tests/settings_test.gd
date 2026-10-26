@@ -307,3 +307,18 @@ func test_gear_row_moves_with_the_wide_layout() -> void:
 	game.size = Vector2(720, 1280)
 	check(game.gear_button.is_visible_in_tree(), "...and back on a tall one")
 	game.free()
+
+func test_report_a_bug_and_discord_buttons() -> void:
+	var settings := SettingsMenu.new()
+	_root().add_child(settings)
+	var buttons := {}
+	for button: Button in settings.find_children("*", "Button", true, false):
+		buttons[button.text] = button
+	check(buttons.has("Report a bug") and buttons.has("Discord"), "Both buttons are there: %s" % [buttons.keys()])
+	var opened: Array[String] = []
+	SettingsMenu.link_opener = func(url: String) -> void: opened.append(url)
+	buttons["Report a bug"].pressed.emit()
+	check_eq(opened, ["https://github.com/thedarkhorse99/ChessPlus/issues"] as Array[String], "Report a bug opens the issues page")
+	check_eq(buttons["Discord"].disabled, SettingsMenu.DISCORD_URL.is_empty(), "Discord is greyed out until its link is set")
+	SettingsMenu.link_opener = Callable()
+	settings.free()

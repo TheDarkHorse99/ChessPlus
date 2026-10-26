@@ -24,6 +24,25 @@ const CREDITS: Array[String] = [
 ## The privacy notice (drafted by Claude for Mac to change, Oct 2026): what the
 ## game keeps and who sees it. Keep it true when online play changes (the
 ## server's rules are in server/supabase_update_*.sql).
+## Where "Report a bug" goes (Mac, 26 Oct 2026): the game's GitHub issues.
+const BUG_REPORT_URL := "https://github.com/thedarkhorse99/ChessPlus/issues"
+## The Discord invite (Mac: link to follow). While it's empty the button is greyed out.
+const DISCORD_URL := ""
+## Tests put a Callable here to see which link a button would open.
+static var link_opener: Callable = Callable()
+
+## Opens a web page: the browser on PC, a new tab on the web (JavaScriptBridge,
+## so the game isn't left; it runs inside the tap, so the browser allows it).
+static func open_link(url: String) -> void:
+	if url.is_empty():
+		return
+	if link_opener.is_valid():
+		link_opener.call(url)
+	elif OS.has_feature("web"):
+		JavaScriptBridge.eval("window.open(%s, '_blank')" % JSON.stringify(url))
+	else:
+		OS.shell_open(url)
+
 const PRIVACY: Array[String] = [
 	"Chess Plus has no accounts and never asks for your name, email or password.",
 	"Local games, your armies and your settings stay on this device.",
@@ -260,6 +279,20 @@ func _build_other() -> void:
 	var gap := Control.new()
 	gap.custom_minimum_size.y = 12
 	sections.add_child(gap)
+	# Report a bug and Discord side by side, above Credits (Mac, 26 Oct 2026).
+	var links := HBoxContainer.new()
+	links.add_theme_constant_override("separation", 12)
+	sections.add_child(links)
+	for entry: Array in [["Report a bug", BUG_REPORT_URL], ["Discord", DISCORD_URL]]:
+		var button := Button.new()
+		button.text = entry[0]
+		button.custom_minimum_size.y = 80
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.disabled = (entry[1] as String).is_empty()
+		if button.disabled:
+			button.tooltip_text = "Link to follow"
+		button.pressed.connect(open_link.bind(entry[1]))
+		links.add_child(button)
 	_wide_button("Credits", show_credits)
 	_wide_button("Privacy", show_privacy)
 	_wide_button("Reset to defaults", ask_reset)
