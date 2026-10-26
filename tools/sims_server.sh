@@ -19,11 +19,19 @@
 #   bash tools/sims_server.sh stop           stop it through AWS (it keeps its disk)
 #   bash tools/sims_server.sh ssh <command>  run a command on it
 #
-# Needs the AWS CLI logged in as profile "chessplus" (aws login --region
-# us-east-2 --profile chessplus) and the key ~/.ssh/chessplus-key.pem.
+# Uses the AWS CLI profile "chessplus-sims" (Mac, 26 Oct 2026): a permanent
+# access key of the IAM user claude-sims that can only start, stop and
+# describe the sims server, open its firewall to a new address, run commands
+# on it and read Cost Explorer (policy: tools/sims_server/remote-policy.json),
+# so no browser sign-in is needed. SIMS_PROFILE=chessplus falls back to the
+# browser login. Also needs the key ~/.ssh/chessplus-key.pem.
 set -euo pipefail
 
-PROFILE=chessplus
+PROFILE="${SIMS_PROFILE:-chessplus-sims}"
+# Until that profile exists on this PC, the browser login is used.
+if ! grep -q "^\[profile $PROFILE\]" ~/.aws/config 2>/dev/null && ! grep -q "^\[$PROFILE\]" ~/.aws/credentials 2>/dev/null; then
+	PROFILE=chessplus
+fi
 NAME=chessplus-sims
 # In ~/.ssh/config the key path must have no spaces (the Windows user folder has one), so ~ is used.
 KEY="~/.ssh/chessplus-key.pem"

@@ -5,6 +5,17 @@ off. A cloud Claude Code session talks to AWS with its own access key and runs
 commands on the sims server through AWS Systems Manager ("Run Command"), so it
 needs no SSH key and no change to the server's firewall.
 
+## The same key on Mac's PC (26 Oct 2026)
+
+The browser sign-in (`aws login`) lapses every day, so `tools/sims_server.sh` now
+uses the profile `chessplus-sims`: the `claude-sims` user's access key stored
+with `aws configure --profile chessplus-sims` (region us-east-2) on the PC, never
+in the repo or in chat. The policy gained two statements for this: opening the
+sims server's security group to a new home address
+(`ec2:AuthorizeSecurityGroupIngress`, `ec2:DescribeSecurityGroups`) and read-only
+Cost Explorer (`ce:GetCostAndUsage`, `ce:GetCostForecast`). Until the profile
+exists the script falls back to the `chessplus` browser login.
+
 ## What Mac sets up once (AWS website, works on a phone)
 
 1. **Let the server take commands through AWS.** EC2 > Instances >

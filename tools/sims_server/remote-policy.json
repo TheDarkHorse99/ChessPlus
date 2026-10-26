@@ -4,13 +4,35 @@
     {
       "Sid": "StartAndStopTheSimsServer",
       "Effect": "Allow",
-      "Action": ["ec2:StartInstances", "ec2:StopInstances"],
+      "Action": [
+        "ec2:StartInstances",
+        "ec2:StopInstances"
+      ],
       "Resource": "arn:aws:ec2:us-east-2:*:instance/INSTANCE_ID"
     },
     {
       "Sid": "SeeWhetherItIsRunning",
       "Effect": "Allow",
-      "Action": ["ec2:DescribeInstances", "ec2:DescribeInstanceStatus"],
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:DescribeInstanceStatus",
+        "ec2:DescribeSecurityGroups"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "LetMacsAddressInOverSsh",
+      "Effect": "Allow",
+      "Action": "ec2:AuthorizeSecurityGroupIngress",
+      "Resource": "arn:aws:ec2:us-east-2:*:security-group/SECURITY_GROUP_ID"
+    },
+    {
+      "Sid": "ReadTheRealBill",
+      "Effect": "Allow",
+      "Action": [
+        "ce:GetCostAndUsage",
+        "ce:GetCostForecast"
+      ],
       "Resource": "*"
     },
     {
