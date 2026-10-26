@@ -34,7 +34,7 @@ PIECES = {
         ([(1, 0), (-1, 0)], 0, 0, {}),
         (DIAG, 1, 0, {}),
     ]),
-    "vampire": dict(name="Vampire", symbol="V", value=6.5, rules=[
+    "vampire": dict(name="Vampire", symbol="V", value=7.5, rules=[
         ([(1, 0), (-1, 0), (0, -1)], 0, 0, {}),
         ([(1, 1), (-1, 1)], 1, 0, {}),
     ], extra={"shield_on_capture": "true"},

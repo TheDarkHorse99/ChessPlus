@@ -219,7 +219,7 @@ func test_match_setup_shows_broken_armies_greyed_out() -> void:
 	_open(setup)
 	var pick: OptionButton = setup.first_pick
 	check_eq(pick.item_count, 5, "Default, Random, Standard, Mine, Bats")
-	check_eq(pick.get_item_text(4), "Bats  (45.5 pts) – over budget", "Last, with the reason")
+	check_eq(pick.get_item_text(4), "Bats  (46.5 pts) – over budget", "Last, with the reason")
 	check(pick.is_item_disabled(4), "...greyed out: it can't be picked")
 	check(pick.get_item_tooltip(4).contains("the budget is 40"), "...and says what's wrong")
 	check(not pick.is_item_disabled(3), "Legal armies can be picked")
@@ -306,7 +306,7 @@ func test_random_army_is_one_of_mine() -> void:
 
 # An army saved when it was legal that a price change pushed over the budget
 # (the match setup leaves it out until it's fixed): the Standard set with a
-# Vampire (6.5) in place of a pawn costs 44.5.
+# Vampire (7.5 since 26 Oct 2026) in place of a pawn costs 46.5.
 func _over_budget_army(army_name: String) -> Army:
 	var army := StandardSetup.army().copy()
 	army.army_name = army_name

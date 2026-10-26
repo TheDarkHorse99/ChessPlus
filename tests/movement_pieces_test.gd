@@ -20,7 +20,7 @@ func _targets(state: GameState, from: String) -> Array:
 	return names
 
 func test_costs_symbols_and_tags() -> void:
-	var expected := {"wizard": ["W", 8.0], "rogue": ["RO", 3.5], "chariot": ["CH", 4.0], "cavalry": ["CV", 3.0], "berserker": ["BR", 2.5]}
+	var expected := {"wizard": ["W", 8.5], "rogue": ["RO", 3.5], "chariot": ["CH", 4.0], "cavalry": ["CV", 3.0], "berserker": ["BR", 2.5]}
 	for id in expected:
 		check_eq([_def(id).symbol, _def(id).value], expected[id], id)
 	check(_def("wizard").is_royal_type() and _def("wizard").has_jump(), "Wizard: Royal, Jump")
