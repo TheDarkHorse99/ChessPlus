@@ -27,8 +27,9 @@
 # the PC stops it through AWS (tools/sims_server.sh stop).
 set -u
 export PF=~/ChessPlus/engine/plusfish/target/release/plusfish
-export PIECES=~/ChessPlus/data/pieces
-BASE=~/plusfish-work/run16
+# BASE and PIECES may be set by the caller (run 17 reuses this at other prices).
+export PIECES="${PIECES:-$HOME/ChessPlus/data/pieces}"
+BASE="${BASE:-$HOME/plusfish-work/run16}"
 SEEDS="${SEEDS:-4}"
 mkdir -p "$BASE/all" "$BASE/split" "$BASE/logs"
 rm -f "$BASE/DONE"
