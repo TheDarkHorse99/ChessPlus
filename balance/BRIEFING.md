@@ -1,6 +1,6 @@
 # Chess Plus balancing: briefing (for a chat that can't see the repo)
 
-Last updated 26 October 2026 (after run 16). The full data is in the repo
+Last updated 26 October 2026 (after run 17). The full data is in the repo
 (github.com/thedarkhorse99/ChessPlus): `balance/results/run1` to `run13` (a
 README and report each) and `CLAUDE.md`. All numbers below come from
 Plusfish, the game's own engine, playing itself: strong hints, not human play.
@@ -158,6 +158,14 @@ strong players score 54-56% with White. Plusfish rates the chess start +0.29.
   is 50% of all-rounders, 65% of White and 88% of Black specialists. White's
   and Black's specialist pools look the same. The Vampire (6.5, measured
   worth 7.0-7.3 in every run) is the obvious next price question.
+- **Run 17, the Vampire and Wizard repriced** (26 Oct): with Nicholas's
+  retrained engine the Vampire measures 7.73 at 6.5 and the Wizard 8.66 at
+  8. At Vampire 7.5 / Wizard 8.5 (tested on the server only) the Vampire
+  reads 7.88 and the Wizard 8.75, and the meta changes: the Vampire falls
+  from 88% to 52% of all-round armies, the Wizard disappears from the
+  specialist pools, and the Queen (10, worth 10.4) plus the Ghost take over
+  ("Queen + Ghost + Vassals" is 50-58% of specialists). Pawn 0.5, Grunt 0.65
+  and Assassin 0.2 keep measuring under their prices. Decision open.
 
 ## Other open questions
 
