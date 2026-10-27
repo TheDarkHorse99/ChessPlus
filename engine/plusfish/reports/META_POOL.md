@@ -1,4 +1,64 @@
-# The meta pool (October 2026, third search: Mac's new prices)
+# The meta pool (October 2026, fourth search: the rules of 24-25 October)
+
+Regrown on 25 October 2026 for Mac's rules of 24 and 25 October (an ability
+and a promotion need a move first, White's first move may not attack, the
+75-move rule), the 40-point budget, the 24-25 Oct prices and the Grunt,
+Abatis and Vassal, with Plusfish after PR #28 (it knows those rules, and its
+weights were retrained on them). It replaces run 7's pool, which was grown
+before any of these rules (kept in `balance/results/run7/meta_pool.txt`).
+
+It started from Mac's run 15 D pool (`balance/results/run15/report_d.md`),
+grown under almost the same rules (everything but promotion needing a move
+first), all ten still legal at today's prices:
+
+```
+plusfish meta --wide 38 --pool start_pool.txt --out meta_pool.txt --game-climb --king-exposed reject --rounds 15 --stable 6 --threads 19 --seed 1
+```
+
+(Nicholas's PC, 19 threads, 2 h 24 min.) Every round changed the pool, as in
+every earlier search: it doesn't settle, so it stopped at 15 rounds. Only one
+starting army (Wide 5b) is still in it.
+
+**Is it stronger?** A round robin of all 20 armies (the new ten and the
+starting ten; Wide 5b is in both), 20 games a pairing at 6,000 nodes
+(`plusfish tournament`, seed 7): the new pool's armies average **58.8%**, the
+starting pool's 41.2%. The new armies take the top five places (Wide 11c
+first at 70.9%, +155 Elo); Wide 5b shares sixth. White's first-move edge in
+those 3,800 games: +28 Elo (about 54% for White, inside chess's 54-56%).
+
+## The pool
+
+| Army | Name | Games vs the rest | Turn-0 eval | Pieces |
+|---|---|---|---|---|
+| `1(VS)JK(SQ)1(VS)1/GVVL(WW)AB(AB)` | Wide 15a | 57.2% (+51) | +137 | 2 Vampire, Archer, Squire, Bishop, Jester, Ghost, Lance, Werewolf, 2 Vassal, Abatis |
+| `(VS)R(VS)K1(GR)(CT)1/JVV(RM)(RM)(WW)B(AB)` | Wide 11a | 54.4% (+31) | +13 | 2 Vampire, Rook, Bishop, Jester, Catapult, 2 Ram, Werewolf, Grunt, 2 Vassal, Abatis |
+| `(GR)(GR)J1KW1R/(PD)VV(BR)(AB)(PD)(CV)1` | Wide 11c | 54.4% (+31) | +71 | Wizard, 2 Vampire, Rook, Jester, Cavalry, Barbarian, 2 Paladin, 2 Grunt, Abatis |
+| `1A(CH)(CT)K(GR)(VS)1/(AB)B1(BR)(BR)VVR` | Wide 14b | 54.2% (+29) | +94 | 2 Vampire, Archer, Rook, Chariot, Bishop, Catapult, 2 Barbarian, Grunt, Vassal, Abatis |
+| `(GA)2KC2N/B(GA)VJA(RM)(PD)A` | Wide 5b | 52.6% (+18) | -63 | Vampire, 2 Archer, Cannon, Bishop, Jester, 2 Galleon, Knight, Ram, Paladin |
+| `(VS)W(VS)JK2(PA)/R1BV(NC)(BR)G(AB)` | Wide 13a | 51.0% (+7) | -34 | Wizard, Vampire, Rook, Bishop, Jester, Necromancer, Ghost, Barbarian, Parapet, 2 Vassal, Abatis |
+| `1ANNK1G(VS)/1VV(CT)(NC)(BR)G(AB)` | Wide 14c | 48.9% (-8) | +88 | 2 Vampire, Archer, Necromancer, Catapult, 2 Ghost, 2 Knight, Barbarian, Vassal, Abatis |
+| `(NC)1PNK(BR)(GR)G/(AB)JV(PA)(BR)BV(AB)` | Wide 4b | 46.8% (-22) | +111 | 2 Vampire, Bishop, Jester, Necromancer, Ghost, Knight, 2 Barbarian, Parapet, Grunt, Pawn, 2 Abatis |
+| `(VS)(GR)(GR)1K(GR)1(GR)/(CH)(CV)VJQA1J` | Wide 1c | 43.5% (-46) | -70 | Queen, Vampire, Archer, Chariot, 2 Jester, Cavalry, 4 Grunt, Vassal |
+| `(NC)(VS)NK(SQ)1R(AS)/(CV)(PD)(RM)LV1(RO)N` | Wide 2a | 36.9% (-93) | -347 | Vampire, Rook, Squire, Necromancer, Rogue, Cavalry, 2 Knight, Lance, Ram, Paladin, Vassal, Assassin |
+
+All cost 40. Games = average score against the other nine (40 games a pair,
+6,000 nodes); eval = average turn-0 advantage over them at 20,000 nodes (cp).
+
+## What it shows
+
+* **The Vampire is in all ten armies, and twice in seven** (16 in all). No
+  other piece is in more than seven. At 6.5 it looks underpriced under the
+  new rules (run 14 already measured it about +0.7 over its cost).
+  Mac's call.
+* **Cheap pawn types fill the armies:** Vassal in seven (10 in all), Abatis in
+  seven (8), Grunt in five (9). The Abatis is a Wall at 0.5 points.
+* **Abilities matter less now that they need a move first:** Archer in five
+  armies, Ghost and Necromancer in four, Werewolf in two, the Bard in none.
+* **The Queen is in only one army** at 10 points, the Wizard in two.
+* Jester in seven, Bishop in six; Rook, Barbarian and Archer in five.
+* Never picked: Bard, Elephant, Man, Princess.
+
+# Earlier: the third search (Mac's new prices, 21 October)
 
 Regrown on 21 October 2026 after Mac's price changes (Vampire 6.5, Princess
 8.5, Squire 4, Galleon 3, Elephant 1, Paladin 1.5, Assassin 0.5; Queen 9).
