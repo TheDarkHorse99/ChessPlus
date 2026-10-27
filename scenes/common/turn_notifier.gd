@@ -34,7 +34,7 @@ static func in_background() -> bool:
 static func your_turn(text: String) -> void:
 	# Switched off in Settings (Mac): nothing.
 	if in_background() and UserSettings.notifications_on():
-		notify("Chess Plus: your move", text)
+		notify("Overchess: your move", text)
 
 static func notify(title: String, text: String) -> void:
 	sent.append(title + ": " + text)

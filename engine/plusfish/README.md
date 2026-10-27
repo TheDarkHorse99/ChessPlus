@@ -1,6 +1,6 @@
 # Plusfish
 
-A Stockfish-style analysis and balancing engine for **Chess Plus**
+A Stockfish-style analysis and balancing engine for **Overchess** (called Chess Plus until 26 Oct 2026)
 (github.com/TheDarkHorse99/ChessPlus).
 
 It reads the game's own piece files (`data/pieces/*.tres`), so it always plays

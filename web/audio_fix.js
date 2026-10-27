@@ -1,4 +1,4 @@
-// Sound after switching apps, in the web version of Chess Plus (Mac's report,
+// Sound after switching apps, in the web version of Overchess (Mac's report,
 // Oct 2026): after leaving the app for another one and coming back, sounds
 // played later and later until the app was restarted. iPhones interrupt a
 // page's audio when it goes into the background, and the audio can come back

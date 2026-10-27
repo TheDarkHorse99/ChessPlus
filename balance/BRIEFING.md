@@ -1,4 +1,4 @@
-# Chess Plus balancing: briefing (for a chat that can't see the repo)
+# Overchess balancing: briefing (for a chat that can't see the repo)
 
 Last updated 26 October 2026 (after run 17). The full data is in the repo
 (github.com/thedarkhorse99/ChessPlus): `balance/results/run1` to `run13` (a

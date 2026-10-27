@@ -47,7 +47,7 @@ REMOTE="$(git remote get-url origin)"
 cd "$TMP"
 git init -q -b gh-pages
 git -c core.autocrlf=false add -A
-git commit -q -m "Web build of Chess Plus from main at $SOURCE_COMMIT"
+git commit -q -m "Web build of Overchess from main at $SOURCE_COMMIT"
 git remote add origin "$REMOTE"
 git push -q --force origin gh-pages
 echo "Published build of $SOURCE_COMMIT. Live in a minute or two at https://thedarkhorse99.github.io/ChessPlus/"

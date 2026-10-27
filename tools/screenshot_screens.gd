@@ -16,6 +16,10 @@ func _initialize() -> void:
 	var out_dir: String = args[0] if args.size() > 0 else "user://screens"
 	var open := args.has("open")
 	SavedGame.save_path = "user://screenshot_screens_game.json"
+	# Its own settings file, so the real one is left alone (the first-launch
+	# How to play page is shown on purpose below).
+	UserSettings.save_path = "user://screenshot_settings.cfg"
+	UserSettings.set_how_to_play_seen(true)
 	PlusfishLink.enabled = false
 	var main: Node = load("res://scenes/main/main.tscn").instantiate()
 	main.library = _example_library()
@@ -63,6 +67,7 @@ func _initialize() -> void:
 		root.get_texture().get_image().save_png(path)
 		print("Saved ", path)
 	DirAccess.remove_absolute(SavedGame.save_path)
+	DirAccess.remove_absolute(UserSettings.save_path)
 	for army in main.library.armies():
 		main.library.delete(army)
 	DirAccess.remove_absolute(ARMIES_DIR)

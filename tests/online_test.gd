@@ -349,7 +349,7 @@ func test_your_move_notification() -> void:
 	TurnNotifier.force_background = true
 	await host_screen.online.poll()
 	TurnNotifier.force_background = false
-	check_eq(TurnNotifier.sent, PackedStringArray(["Chess Plus: your move: Your opponent played e5."]), "In the background: told it's your move")
+	check_eq(TurnNotifier.sent, PackedStringArray(["Overchess: your move: Your opponent played e5."]), "In the background: told it's your move")
 	TurnNotifier.sent.clear()
 	host_screen.free()
 	guest_screen.free()

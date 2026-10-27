@@ -185,10 +185,10 @@ func test_load_armies_screen() -> void:
 	setup.load_chosen_armies()
 	check(message.text.contains("Black's army") and message.text.contains("Paste"), "Asks for the text: " + message.text)
 	check_eq(setup.setup.pieces.size(), 32, "Nothing loaded yet")
-	black_text.text = 'Chess Plus army "Pasted": - - - - - - - - / - - - - K - - (Q)'
+	black_text.text = 'Overchess army "Pasted": - - - - - - - - / - - - - K - - (Q)'
 	setup.load_chosen_armies()
 	check(message.text.contains("Q)"), "Broken text says what's wrong: " + message.text)
-	black_text.text = 'Chess Plus army "Pasted": - - - - - - - - / R - - - K - - -'
+	black_text.text = 'Overchess army "Pasted": - - - - - - - - / R - - - K - - -'
 	setup.load_chosen_armies()
 	check(panel.is_queued_for_deletion(), "Loaded: the pop-up closes")
 	var pieces := _pieces_by_name(setup.setup)

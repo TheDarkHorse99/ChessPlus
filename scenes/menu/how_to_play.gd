@@ -11,7 +11,7 @@ signal closed
 const TITLE := "How to play"
 ## The page: [heading or "", [lines]]. A line starting with "- " is a bullet.
 const SECTIONS: Array = [
-	["", ["Chess Plus is chess with an army you build yourself."]],
+	["", ["Overchess is chess with an army you build yourself."]],
 	["Build your army", [
 		"- You have 40 points to spend on pieces.",
 		"- Your pieces start on your side's two rows.",

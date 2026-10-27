@@ -53,21 +53,22 @@ theme_override_constants/separation = 16
 [node name="Title" type="HBoxContainer" parent="Scroll/Page/Center/Layout"]
 layout_mode = 2
 alignment = 1
-theme_override_constants/separation = 20
+theme_override_constants/separation = 0
 
-[node name="Chess" type="Label" parent="Scroll/Page/Center/Layout/Title"]
-layout_mode = 2
-theme_type_variation = &"TitleLabel"
-theme_override_font_sizes/font_size = 84
-text = "Chess"
-
-[node name="Plus" type="Label" parent="Scroll/Page/Center/Layout/Title"]
+[node name="Over" type="Label" parent="Scroll/Page/Center/Layout/Title"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"TitleLabel"
 theme_override_colors/font_color = Color(0.9490196, 0.75686276, 0.30588236, 1)
 theme_override_font_sizes/font_size = 84
-text = "Plus"
+text = "Over"
+
+[node name="Chess" type="Label" parent="Scroll/Page/Center/Layout/Title"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 84
+text = "chess"
 
 [node name="Underline" type="ColorRect" parent="Scroll/Page/Center/Layout"]
 custom_minimum_size = Vector2(72, 5)

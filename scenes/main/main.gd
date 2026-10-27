@@ -18,6 +18,9 @@ var screen: Node
 var volume_control: VolumeControl
 
 func _ready() -> void:
+	# Before anything reads a save: on PC, the saves from when the game was
+	# called ChessPlus (26 Oct 2026) come over to Overchess's folder once.
+	OldSaves.bring_over_on_start()
 	UiStyle.apply_font_smoothing()
 	SystemFonts.install()
 	KeyBinds.install()

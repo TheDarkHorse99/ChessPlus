@@ -44,7 +44,7 @@ static func open_link(url: String) -> void:
 		OS.shell_open(url)
 
 const PRIVACY: Array[String] = [
-	"Chess Plus has no accounts and never asks for your name, email or password.",
+	"Overchess has no accounts and never asks for your name, email or password.",
 	"Local games, your armies and your settings stay on this device.",
 	"For online play, this device signs in to the game's server (run by Supabase) with a random ID. The server keeps your online games (moves, armies and their names, and chat) and deletes them 30 days after they end, or after a day if nobody joined. It also notes when you were last online, for the player count, and forgets that after a day.",
 	"Your opponent sees your army, its name and your chat messages. Anyone with a game's code can see its moves and armies, but not the chat.",

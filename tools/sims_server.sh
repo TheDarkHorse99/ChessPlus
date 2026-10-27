@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The Chess Plus sims server on AWS (Mac's project, us-east-2): a c8g.16xlarge
+# The Overchess sims server on AWS (Mac's project, us-east-2): a c8g.16xlarge
 # (64 Graviton4 cores, Arm) named "chessplus-sims", kept stopped between runs
 # (Mac's choice).
 # Every run ends with "stop" from here, a stop through AWS (Mac, Oct 2026):

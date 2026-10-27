@@ -3,7 +3,7 @@ extends RefCounted
 
 ## The player's saved armies: one file per army in a folder on the device.
 ## "user://" is the game's own private folder (on Windows it's inside
-## %APPDATA%\Godot\app_userdata\ChessPlus\).
+## %APPDATA%\Godot\app_userdata\Overchess\).
 
 const DEFAULT_DIR := "user://armies/"
 const MAX_ARMIES := 10

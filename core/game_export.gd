@@ -4,7 +4,7 @@ extends RefCounted
 ## A finished game as one line of text, to keep or send to someone, which
 ## Testing mode can read back ("Import game") to look over the game there.
 ## One line, since a phone's text box can't hold more:
-##   Chess Plus game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w; captured: -; moves: e2-e4 e7-e5
+##   Overchess game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w; captured: -; moves: e2-e4 e7-e5
 ## - the starting position: the pieces as in a FEN (top row first, uppercase =
 ##   White, two-letter symbols in brackets, digits = empty squares), then who
 ##   moved first (w or b);
@@ -14,7 +14,10 @@ extends RefCounted
 ## Every piece starts unmoved, as in any game from armies or from Testing mode.
 
 ## What the text starts with.
-const TEXT_START := "Chess Plus game"
+const TEXT_START := "Overchess game"
+## What it started with before the game was renamed (Mac, 26 Oct 2026):
+## still read, so games exported before then import as before.
+const OLD_TEXT_STARTS: Array[String] = ["Chess Plus game"]
 const NONE := "-"
 
 ## The game that started from `start` (a fresh copy of the starting position)
@@ -38,7 +41,8 @@ static func to_text(start: GameState, moves: Array[Move]) -> String:
 static func from_text(text: String) -> Dictionary:
 	var line := text.strip_edges()
 	var colon := line.find(":")
-	if colon < 0 or not line.left(colon).strip_edges().to_lower() == TEXT_START.to_lower():
+	var label := line.left(colon).strip_edges().to_lower() if colon >= 0 else ""
+	if not ([TEXT_START] + OLD_TEXT_STARTS).any(func(start: String) -> bool: return start.to_lower() == label):
 		return _error("That isn't game text. It should start with \"%s:\" (from Export game)." % TEXT_START)
 	var parts := {}
 	var fields := line.substr(colon + 1).split(";")

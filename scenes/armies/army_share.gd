@@ -9,12 +9,15 @@ extends RefCounted
 ## Armies can also be shared as a line of text, with no server: "Copy as text"
 ## in Share, "Import text" in Import army. The text is one line (a phone's text
 ## box can't hold more), the rows as seen in the army builder, top row first:
-##   Chess Plus army "Wall": P P P P P P P P / R N B Q K B N R
+##   Overchess army "Wall": P P P P P P P P / R N B Q K B N R
 ## Each square is a piece's letters (PieceDef.symbol) or - for an empty one,
 ## files a to h from left to right.
 
 ## What the text starts with.
-const TEXT_START := "Chess Plus army"
+const TEXT_START := "Overchess army"
+## What it started with before the game was renamed (Mac, 26 Oct 2026):
+## still read, so texts sent before then import as before.
+const OLD_TEXT_STARTS: Array[String] = ["Chess Plus army"]
 const EMPTY_SQUARE := "-"
 ## Imported names are cut to the army builder's limit.
 const NAME_MAX_LENGTH := 20
@@ -66,7 +69,7 @@ static func from_text(text: String, width := 8) -> Dictionary:
 	var name_start := line.find('"')
 	var name_end := line.rfind('"')
 	var colon := line.find(":", name_end)
-	if not line.to_lower().begins_with(TEXT_START.to_lower()) or name_start < 0 or name_end <= name_start or colon < 0:
+	if not _starts_right(line) or name_start < 0 or name_end <= name_start or colon < 0:
 		return _text_error("That isn't army text. It should look like: %s \"Name\": P P P ..." % TEXT_START)
 	var by_symbol := {}
 	for def in PieceCatalog.all_defs():
@@ -125,3 +128,10 @@ static func unique_name(library: ArmyLibrary, wanted: String) -> String:
 	while "%s (%d)" % [wanted, n] in taken:
 		n += 1
 	return "%s (%d)" % [wanted, n]
+
+## Whether `line` starts like army text (today's start or an old one).
+static func _starts_right(line: String) -> bool:
+	for start: String in [TEXT_START] + OLD_TEXT_STARTS:
+		if line.to_lower().begins_with(start.to_lower()):
+			return true
+	return false

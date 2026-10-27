@@ -32,7 +32,7 @@ func test_standard_game_round_trip() -> void:
 	for san in ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Bxc6", "dxc6", "O-O"]:
 		state.make_move(Notation.find_move(state, san))
 	var text := GameExport.to_text(StandardSetup.create_game(), state.history)
-	check_eq(text, "Chess Plus game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w; captured: -; moves: e2-e4 e7-e5 g1-f3 b8-c6 f1-b5 a7-a6 b5xc6 d7xc6 e1-g1", "One line")
+	check_eq(text, "Overchess game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w; captured: -; moves: e2-e4 e7-e5 g1-f3 b8-c6 f1-b5 a7-a6 b5xc6 d7xc6 e1-g1", "One line")
 	var back := _replayed(text)
 	check_eq(Fen.write(back), Fen.write(state), "Same game after reading it back")
 
@@ -65,15 +65,15 @@ func test_custom_pieces_black_first_and_captured_round_trip() -> void:
 	check_eq(Fen.write(_replayed(text)), Fen.write(state), "Same game after reading it back")
 
 func test_bad_text_says_what_is_wrong() -> void:
-	var start := "Chess Plus game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w; captured: -; moves: "
+	var start := "Overchess game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w; captured: -; moves: "
 	var cases := {
 		"hello": "isn't game text",
-		'Chess Plus army "A": P P P P P P P P / R N B Q K B N R': "isn't game text",
-		"Chess Plus game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w": "no moves",
-		"Chess Plus game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBZR w; captured: -; moves: ": "letters Z",
-		"Chess Plus game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBN w; captured: -; moves: ": "Row 1",
-		"Chess Plus game: 4k3/8/8/8/8/8/8/8 w; captured: -; moves: ": "White needs exactly one King",
-		"Chess Plus game: 4k3/8/8/8/8/8/8/4K3 w; captured: (XX); moves: ": "letters (XX)",
+		'Overchess army "A": P P P P P P P P / R N B Q K B N R': "isn't game text",
+		"Overchess game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w": "no moves",
+		"Overchess game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBZR w; captured: -; moves: ": "letters Z",
+		"Overchess game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBN w; captured: -; moves: ": "Row 1",
+		"Overchess game: 4k3/8/8/8/8/8/8/8 w; captured: -; moves: ": "White needs exactly one King",
+		"Overchess game: 4k3/8/8/8/8/8/8/4K3 w; captured: (XX); moves: ": "letters (XX)",
 		start + "e2-e4 e7-e5 e4-e5": "White's move 2 (e4-e5)",
 	}
 	for text: String in cases:
@@ -81,7 +81,7 @@ func test_bad_text_says_what_is_wrong() -> void:
 		check(found.position == null, "Not read: " + text)
 		check(found.error.contains(cases[text]), "%s -> %s" % [text, found.error])
 	# Spaces and letter case round the edges don't matter.
-	check_eq(GameExport.from_text("  chess plus game : " + start.substr(17) + "e2-e4  ").error, "", "Loose spacing is fine")
+	check_eq(GameExport.from_text("  overchess game : " + start.substr(start.find(":") + 1) + "e2-e4  ").error, "", "Loose spacing is fine")
 
 # --- The game screen -----------------------------------------------------------------
 
@@ -101,7 +101,7 @@ func test_export_from_the_result_screen() -> void:
 	var panel: ModalPanel = game.export_panel
 	check(panel != null and panel.is_inside_tree(), "Export pop-up shown")
 	var shown: Label = panel.find_child("GameText", true, false)
-	check_eq(shown.text, "Chess Plus game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w; captured: -; moves: f2-f3 e7-e5 g2-g4 d8-h4", "The game's text")
+	check_eq(shown.text, "Overchess game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w; captured: -; moves: f2-f3 e7-e5 g2-g4 d8-h4", "The game's text")
 	panel.close()
 	# After View board, the Resign button (now Results) brings the result back.
 	game.game_over_panel.button("board").pressed.emit()
@@ -124,10 +124,10 @@ func test_import_into_testing_mode() -> void:
 	var message: Label = setup.import_panel.find_child("Message", true, false)
 	setup.import_game("")
 	check(message.text.contains("Paste"), "Asks for the text: " + message.text)
-	setup.import_game("Chess Plus game: 8/8 w; captured: -; moves: ")
+	setup.import_game("Overchess game: 8/8 w; captured: -; moves: ")
 	check(message.text.contains("rows"), "Says what's wrong: " + message.text)
 	check(main.screen == setup, "Still setting up")
-	setup.import_game("Chess Plus game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w; captured: -; moves: f2-f3 e7-e5 g2-g4 d8-h4")
+	setup.import_game("Overchess game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w; captured: -; moves: f2-f3 e7-e5 g2-g4 d8-h4")
 	var game: Node = main.screen
 	check(game != setup and game.testing_position != null, "A testing game opened")
 	check_eq(game.state.history.size(), 4, "With the game's moves played")
@@ -153,7 +153,7 @@ func test_imported_game_side_line_play_from_here() -> void:
 	var main: Node = load("res://scenes/main/main.tscn").instantiate()
 	_root().add_child(main)
 	main.show_testing_setup()
-	main.screen.import_game("Chess Plus game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w; captured: -; moves: f2-f3 e7-e5 g2-g4 d8-h4")
+	main.screen.import_game("Overchess game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w; captured: -; moves: f2-f3 e7-e5 g2-g4 d8-h4")
 	var game: Node = main.screen
 	game.game_over_panel.button("board").pressed.emit()
 	game.view_move(2)
@@ -165,3 +165,10 @@ func test_imported_game_side_line_play_from_here() -> void:
 	check(game.side_lines.is_empty(), "It's the game's now, not a side line")
 	check(not game.is_over(), "The game is on again")
 	main.free()
+
+func test_game_text_from_before_the_rename() -> void:
+	# The game was Chess Plus until 26 Oct 2026; games exported then still import.
+	var old := GameExport.from_text("Chess Plus game: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w; captured: -; moves: e2-e4 e7-e5")
+	check_eq(old.error, "", "Old game text still reads")
+	check_eq(old.moves.size(), 2, "Both moves")
+	check(GameExport.to_text(StandardSetup.create_game(), [] as Array[Move]).begins_with("Overchess game: "), "New texts say Overchess")

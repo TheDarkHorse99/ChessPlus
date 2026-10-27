@@ -398,7 +398,7 @@ func test_army_text() -> void:
 	var standard := StandardSetup.army()
 	standard.army_name = "Sharer"
 	var text := ArmyShare.to_text(standard)
-	check_eq(text, 'Chess Plus army "Sharer": P P P P P P P P / R N B Q K B N R', "Front row first, then the back row")
+	check_eq(text, 'Overchess army "Sharer": P P P P P P P P / R N B Q K B N R', "Front row first, then the back row")
 	var found := ArmyShare.from_text(text)
 	var back: Army = found.army
 	check(back != null, "Reads back: " + found.error)
@@ -417,7 +417,7 @@ func test_army_text() -> void:
 	mixed.place(load("res://data/pieces/paladin.tres"), Vector2i(0, 1))
 	mixed.place(ELEPHANT, Vector2i(2, 0))
 	var mixed_text := ArmyShare.to_text(mixed)
-	check_eq(mixed_text, 'Chess Plus army "The "Wall": 2": PD - - - - - - - / - - E - K - - -', "Two-letter symbols and empty squares")
+	check_eq(mixed_text, 'Overchess army "The "Wall": 2": PD - - - - - - - / - - E - K - - -', "Two-letter symbols and empty squares")
 	var again: Army = ArmyShare.from_text("  " + mixed_text.to_lower().replace(" / ", "  /  ") + " ").army
 	check(again != null, "Lower case and extra spaces are fine")
 	if again:
@@ -427,9 +427,9 @@ func test_army_text() -> void:
 		check_eq(again.pieces.size(), 3, "Nothing else")
 	# Broken text says what's wrong.
 	check(ArmyShare.from_text("hello").error.contains("isn't army text"), "Not army text")
-	check(ArmyShare.from_text('Chess Plus army "X": P P P / K').error.contains("8 squares"), "Rows too short")
-	check(ArmyShare.from_text('Chess Plus army "X": - - - - - - - - / - - - - K - - ZZ').error.contains("ZZ"), "Unknown piece letters")
-	check_eq(ArmyShare.from_text('Chess Plus army "": - - - - - - - - / - - - - K - - -').army.army_name, "Imported army", "A blank name gets one")
+	check(ArmyShare.from_text('Overchess army "X": P P P / K').error.contains("8 squares"), "Rows too short")
+	check(ArmyShare.from_text('Overchess army "X": - - - - - - - - / - - - - K - - ZZ').error.contains("ZZ"), "Unknown piece letters")
+	check_eq(ArmyShare.from_text('Overchess army "": - - - - - - - - / - - - - K - - -').army.army_name, "Imported army", "A blank name gets one")
 
 func test_share_and_import_as_text() -> void:
 	var library := _fresh_library()
@@ -462,7 +462,7 @@ func test_share_and_import_as_text() -> void:
 	check("Sharer (2)" in names, "Imported, renamed so names don't clash")
 	# An army breaking the rules (no king) isn't saved.
 	army_list.ask_import()
-	army_list.import_text('Chess Plus army "No king": - - - - - - - - / Q - - - - - - -')
+	army_list.import_text('Overchess army "No king": - - - - - - - - / Q - - - - - - -')
 	var message: Label = army_list.import_panel.find_child("Message", true, false)
 	check(message.text.contains("army rules"), "Illegal army: " + message.text)
 	army_list.import_text("")
@@ -503,3 +503,12 @@ func test_king_has_a_swirled_frame_instead_of_a_badge() -> void:
 	check_eq(frame.team, Piece.Team.BLACK, "Follows the White/Black button")
 	check(builder._tray_buttons[KNIGHT].get_node_or_null("KingFrame") == null, "Only the king has one")
 	builder.free()
+
+func test_army_text_from_before_the_rename() -> void:
+	# The game was Chess Plus until 26 Oct 2026; texts sent then still import.
+	var old := ArmyShare.from_text('Chess Plus army "Old": P P P P P P P P / R N B Q K B N R')
+	check(old.army != null, "Old army text still reads: " + str(old.error))
+	if old.army:
+		check_eq(old.army.army_name, "Old", "Name kept")
+		check_eq(old.army.pieces.size(), 16, "All 16 pieces")
+	check(ArmyShare.to_text(StandardSetup.army()).begins_with("Overchess army "), "New texts say Overchess")

@@ -12,6 +12,9 @@ text = io.open(path, encoding="utf-8").read()
 replacements = [
 	("cache.addAll(CACHED_FILES)",
 	 "cache.addAll(CACHED_FILES.map((name) => new Request(name, { cache: 'no-cache' })))"),
+	# The game was called ChessPlus until 26 Oct 2026: its old offline copy goes too.
+	("key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME",
+	 "(key.startsWith(CACHE_PREFIX) || key.startsWith('ChessPlus-sw-cache-')) && key !== CACHE_NAME"),
 	("response = await self.fetch(event.request);",
 	 "response = await self.fetch(event.request.mode === 'navigate' ? event.request : new Request(event.request, { cache: 'no-cache' }));"),
 ]

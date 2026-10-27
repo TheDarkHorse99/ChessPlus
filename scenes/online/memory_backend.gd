@@ -77,7 +77,7 @@ func referee(action: String, args: Dictionary) -> Dictionary:
 		"quick": return _referee_quick(args)
 	return failed("unknown action")
 
-const UPDATE_NEEDED := "This copy of Chess Plus is out of date for online play: it updates itself at the main menu."
+const UPDATE_NEEDED := "This copy of Overchess is out of date for online play: it updates itself at the main menu."
 
 func _referee_create(args: Dictionary) -> Dictionary:
 	if args.get("rules", "") != RuleSet.version():
@@ -98,7 +98,7 @@ func _referee_join(args: Dictionary) -> Dictionary:
 		return failed("There's no game with the code %s." % code)
 	var g: Dictionary = games[code]
 	if args.get("rules", "") != g.rules:
-		return failed("You and your opponent have different versions of Chess Plus: both update themselves at the main menu.")
+		return failed("You and your opponent have different versions of Overchess: both update themselves at the main menu.")
 	if g.status != OnlineSession.WAITING:
 		return failed("That game was cancelled." if g.status == OnlineSession.CANCELLED else "That game has already started.")
 	var seat := "white" if g.white_id == "" else "black"

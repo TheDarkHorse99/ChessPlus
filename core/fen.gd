@@ -6,7 +6,7 @@ extends RefCounted
 ##   pieces (top rank first, "/" between ranks, digits = that many empty squares)
 ##   side to move (w or b), castling rights (KQkq or -), en passant square (or -),
 ##   halfmove clock, move number.
-## Uppercase letters are White, lowercase are Black. Chess Plus can add, after
+## Uppercase letters are White, lowercase are Black. Overchess can add, after
 ## the six, "unchanged=N" (the 75-move rule's count of plies since the pieces
 ## last changed): parse() always reads it (left out, it equals the halfmove
 ## clock); write() adds it only when asked (`with_count`), so FENs stay

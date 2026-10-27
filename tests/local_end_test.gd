@@ -100,7 +100,7 @@ func test_bot_reply_notifies_in_the_background() -> void:
 	_play(game, "e4")
 	TurnNotifier.force_background = false
 	check_eq(TurnNotifier.sent.size(), 1, "Told when the bot has replied")
-	check(TurnNotifier.sent[0].begins_with("Chess Plus: your move: The bot played "), TurnNotifier.sent[0] if not TurnNotifier.sent.is_empty() else "")
+	check(TurnNotifier.sent[0].begins_with("Overchess: your move: The bot played "), TurnNotifier.sent[0] if not TurnNotifier.sent.is_empty() else "")
 	TurnNotifier.sent.clear()
 	game.free()
 	SavedGame.delete_saved()

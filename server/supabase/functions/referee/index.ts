@@ -83,7 +83,7 @@ async function rpc(name: string, args: Record<string, unknown>): Promise<Respons
   return reply({ game: text.trim() === "" ? null : JSON.parse(text) });
 }
 
-const UPDATE_NEEDED = "This copy of Chess Plus is out of date for online play: it updates itself at the main menu.";
+const UPDATE_NEEDED = "This copy of Overchess is out of date for online play: it updates itself at the main menu.";
 
 function ruleSet(version: unknown): RuleSetData | null {
   return typeof version === "string" ? RULE_SETS[version] ?? null : null;
@@ -116,7 +116,7 @@ async function join(user: string, body: Record<string, any>): Promise<Response> 
   if (!game) return reply({ error: `There's no game with the code ${code}.` }, 400);
   const rs = ruleSet(game.rules);
   if (!rs || body.rules !== game.rules) {
-    return reply({ error: "You and your opponent have different versions of Chess Plus: both update themselves at the main menu." }, 400);
+    return reply({ error: "You and your opponent have different versions of Overchess: both update themselves at the main menu." }, 400);
   }
   if (game.status !== "waiting") {
     return reply({ error: game.status === "cancelled" ? "That game was cancelled." : "That game has already started." }, 400);

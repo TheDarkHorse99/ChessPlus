@@ -1,4 +1,4 @@
-// Plusfish in the web version of Chess Plus: runs plusfish.wasm (the engine
+// Plusfish in the web version of Overchess: runs plusfish.wasm (the engine
 // compiled to WebAssembly, from engine/plusfish) in a background thread (a Web
 // Worker), so working out the eval bar never freezes the game or its sounds
 // (it took ~45 ms a position on a PC, longer on phones, and made sounds late).
