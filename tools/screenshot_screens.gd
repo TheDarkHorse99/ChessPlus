@@ -24,6 +24,7 @@ func _initialize() -> void:
 	var shows := {
 		"menu": main.show_main_menu,
 		"settings": main.show_settings,
+		"howto": main.show_how_to_play,
 		"armies": main.show_army_list,
 		"builder": func() -> void: main.show_army_builder(main.library.armies()[0]),
 		"setup": main.show_match_setup,

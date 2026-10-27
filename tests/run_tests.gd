@@ -30,6 +30,8 @@ func _ready() -> void:
 	SavedGame.save_path = "user://test_current_game.json"
 	SavedGame.delete_saved()
 	UserSettings.save_path = "user://test_settings.cfg"
+	# Tests that open the main scene expect the menu, not the first-launch How to play page.
+	UserSettings.set_how_to_play_seen(true)
 	# Finished games in tests mustn't start Plusfish (eval_bar_test turns it on).
 	PlusfishLink.enabled = false
 	# Silent: sounds still left playing when the tests quit count as leaks.

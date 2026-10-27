@@ -39,6 +39,13 @@ static func set_group_volume(group: String, value: float) -> void:
 	_store("audio", "volume_" + group, clampf(value, 0.0, 1.0))
 
 ## "Your move" notifications (TurnNotifier), on unless switched off in Settings.
+## Whether the How to play page has been shown once at start-up (Mac, Oct 2026).
+static func how_to_play_seen() -> bool:
+	return _settings().get_value("help", "how_to_play_seen", false)
+
+static func set_how_to_play_seen(seen: bool) -> void:
+	_store("help", "how_to_play_seen", seen)
+
 static func notifications_on() -> bool:
 	return _settings().get_value("notify", "your_move", true)
 

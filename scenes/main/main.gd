@@ -27,6 +27,7 @@ func _ready() -> void:
 	# A local game left 2 days without a move ends; say so once (Mac).
 	var note := SavedGame.end_if_abandoned()
 	show_main_menu()
+	show_how_to_play_once()
 	if note != "":
 		show_note("Game ended", note)
 	_watch_for_updates()
@@ -110,6 +111,7 @@ func show_main_menu() -> void:
 	var menu := MAIN_MENU.instantiate()
 	menu.continue_pressed.connect(continue_game)
 	menu.play_pressed.connect(show_match_setup)
+	menu.how_to_play_pressed.connect(show_how_to_play)
 	menu.online_pressed.connect(show_online_lobby)
 	menu.continue_online_pressed.connect(continue_online_game)
 	menu.armies_pressed.connect(show_army_list)
@@ -159,6 +161,19 @@ func _update_if_ready() -> void:
 		JavaScriptBridge.eval("window.cpUpdate.ready = false; window.cpUpdate.apply();", true)
 
 ## The Settings screen (Back returns to the main menu).
+## The How to play page (Mac, 26 Oct 2026): from the menu, and once on the
+## first launch (`UserSettings.how_to_play_seen`).
+func show_how_to_play() -> void:
+	var page := HowToPlay.new()
+	page.closed.connect(show_main_menu)
+	_show(page)
+
+func show_how_to_play_once() -> void:
+	if UserSettings.how_to_play_seen():
+		return
+	UserSettings.set_how_to_play_seen(true)
+	show_how_to_play()
+
 func show_settings() -> void:
 	var settings := SettingsMenu.new()
 	settings.closed.connect(show_main_menu)
