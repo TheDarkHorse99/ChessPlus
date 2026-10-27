@@ -1,7 +1,7 @@
 # Plusfish
 
 A Stockfish-style analysis and balancing engine for **Overchess** (called Chess Plus until 26 Oct 2026)
-(github.com/TheDarkHorse99/ChessPlus).
+(github.com/TheDarkHorse99/Overchess).
 
 It reads the game's own piece files (`data/pieces/*.tres`), so it always plays
 by the current rules. Change a piece's moves or cost in the game and Plusfish

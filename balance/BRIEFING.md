@@ -1,7 +1,7 @@
 # Overchess balancing: briefing (for a chat that can't see the repo)
 
 Last updated 26 October 2026 (after run 17). The full data is in the repo
-(github.com/thedarkhorse99/ChessPlus): `balance/results/run1` to `run13` (a
+(github.com/thedarkhorse99/Overchess): `balance/results/run1` to `run13` (a
 README and report each) and `CLAUDE.md`. All numbers below come from
 Plusfish, the game's own engine, playing itself: strong hints, not human play.
 Balancing is now discussed in Claude Code; Mac makes the decisions.

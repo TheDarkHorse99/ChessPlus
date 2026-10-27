@@ -5,7 +5,7 @@ six, or 27 new ones with their own moves, shields, walls and once-a-game
 abilities - set them up on your two rows, and play: against a friend on one
 device, against the computer, or online with a code or a quick match.
 
-**Play it now:** https://thedarkhorse99.github.io/ChessPlus/ (phone or
+**Play it now:** https://thedarkhorse99.github.io/Overchess/ (phone or
 desktop browser; on iPhone, Share -> Add to Home Screen for a full-screen app).
 
 | Building an army | A game |
@@ -58,5 +58,5 @@ shows its moves and rules.
 Made with Godot 4 (GDScript); the analysis engine is Rust. The code is all
 here; its licence file is still to be added. Art and sound are under the
 licences credited above. Bug reports and ideas:
-[issues](https://github.com/thedarkhorse99/ChessPlus/issues), or come and talk
-on [Discord](https://discord.gg/Z7dyqquC94).
+[issues](https://github.com/thedarkhorse99/Overchess/issues), or come and talk
+on [Discord](https://discord.gg/Z7dyqquC94). Anything else: theoverchesshub@gmail.com.

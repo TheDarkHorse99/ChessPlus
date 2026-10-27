@@ -318,9 +318,12 @@ func test_report_a_bug_and_discord_buttons() -> void:
 	var opened: Array[String] = []
 	SettingsMenu.link_opener = func(url: String) -> void: opened.append(url)
 	buttons["Report a bug"].pressed.emit()
-	check_eq(opened, ["https://github.com/thedarkhorse99/ChessPlus/issues"] as Array[String], "Report a bug opens the issues page")
+	check_eq(opened, ["https://github.com/thedarkhorse99/Overchess/issues"] as Array[String], "Report a bug opens the issues page")
 	check(not buttons["Discord"].disabled, "Discord is ready to press")
 	buttons["Discord"].pressed.emit()
 	check_eq(opened[-1], "https://discord.gg/Z7dyqquC94", "Discord opens the server's invite")
 	SettingsMenu.link_opener = Callable()
 	settings.free()
+
+func test_privacy_gives_a_contact_address() -> void:
+	check(SettingsMenu.PRIVACY[-1].contains("theoverchesshub@gmail.com"), "The last line says where to write")

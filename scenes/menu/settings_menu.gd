@@ -25,7 +25,7 @@ const CREDITS: Array[String] = [
 ## game keeps and who sees it. Keep it true when online play changes (the
 ## server's rules are in server/supabase_update_*.sql).
 ## Where "Report a bug" goes (Mac, 26 Oct 2026): the game's GitHub issues.
-const BUG_REPORT_URL := "https://github.com/thedarkhorse99/ChessPlus/issues"
+const BUG_REPORT_URL := "https://github.com/thedarkhorse99/Overchess/issues"
 ## The Discord server's invite (Mac, 26 Oct 2026). If it's ever empty the button is greyed out.
 const DISCORD_URL := "https://discord.gg/Z7dyqquC94"
 ## Tests put a Callable here to see which link a button would open.
@@ -51,6 +51,7 @@ const PRIVACY: Array[String] = [
 	"If a game is reported, its chat and moves are kept for 90 days so the report can be looked at.",
 	"Armies you share by code stay on the server so others can import them.",
 	"Like any website, the server and the game's web host (GitHub) record connection details such as IP addresses.",
+	"Questions, or want your online games or shared armies deleted? Email theoverchesshub@gmail.com.",
 ]
 
 ## The scrolling list of settings.
