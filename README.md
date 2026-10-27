@@ -58,4 +58,5 @@ shows its moves and rules.
 Made with Godot 4 (GDScript); the analysis engine is Rust. The code is all
 here; its licence file is still to be added. Art and sound are under the
 licences credited above. Bug reports and ideas:
-[issues](https://github.com/thedarkhorse99/ChessPlus/issues).
+[issues](https://github.com/thedarkhorse99/ChessPlus/issues), or come and talk
+on [Discord](https://discord.gg/Z7dyqquC94).
