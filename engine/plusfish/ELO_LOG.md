@@ -61,6 +61,7 @@ Lazy SMP adds to the clock result on top: 4 threads vs 1 = +102.5 ±24.1 (#5).
 | 34 | SPSA re-tune of 27 constants on #33 (12,000 pairs at 6k, whole-number depth limits and singular-extension settings fixed) | nodes 6k | 6000 | +1.6 ±5.3 | not kept (the constants were already about right) |
 | 35 | Opening terms (`omat`, `omob`, `oreach`, `orow1`, `oability` per piece, `otempo`; each times the share of pieces not yet moved), tuned on the first 40 plies of 9,000 `drift` games (three runs: the base engine's, the first opening weights', and one with half its armies from the meta pool) labelled by the later scores (plies +16..+40), nothing else changed; see reports/START_EVAL.md. First weights (one run) vs base: +21.9 ±11.2 at 6k. Kept build vs base: | nodes 6k / nodes 20k / nodes 20k, meta pool | 2000 / 1200 / 1000 | +34.7 ±10.4 / +43.1 ±13.4 / +6.6 ±12.2 (no Vampires and few pawns in the pool) | kept |
 | 36 | Re-tune for Mac's rules of 24-25 Oct 2026 (abilities and promotion need a move first, White's quiet first move, 75-move rule) and the Grunt, Abatis and Vassal: piece weights plus where pieces stand (HOW_TO job 2, new pawn types added to the list) on 16,000 `selfplay` games under the rules, then the opening terms on 4,000 `drift` games (40k nodes, half meta pool armies) | nodes 6k, random / pool | 2000 / 1000 | +28.0 ±11.4 / +3.5 ±16.4 | kept |
+| 37 | Endgame tables (King + one piece v King, 31 tables, `src/endgame.rs`) + mop-up term for a lone King (`eval::mop_up`, 10 cp per half-square from the centre, 20 per square the other King is closer). Measured apart on the new meta pool: tables only +0.9 ±1.5 / -0.3 ±1.1, mop-up only -3.6 ±3.2 / +1.6 ±2.8, both -1.2 ±3.1 / +1.2 ±2.7 (two seeds of 2000 games each; matches adjudicate at ±10 pawns, so few games get that far). See "Lone-King endings" below for what it changes | nodes 6k, random / pool | 2000 / 5000 | +4.9 ±3.6 / -1.0 ±1.9 | kept (converts lone-King endings, see below) |
 
 ## Checkpoint: build after #33 vs the build after #26 (fork main)
 
@@ -144,3 +145,23 @@ average of the last two search depths as the score (no better).
 build before it, on that pool: **+107.5 ±19.0** (6,000 nodes, 1000 games).
 start-check on the pool + Standard (55 pairings, 40 games each): correlation
 0.79 at 20,000 nodes with #23, 0.41 before it.
+
+## Lone-King endings (#37)
+
+The meta pool's ten armies, 60 games a pairing (45 pairings), played to the
+end with no adjudication at 6,000 nodes: 2,008 different games. From each,
+the first position where one side has only its King left and the other a
+piece that can capture (584 positions, 3 to 7 pieces), played out again by
+one engine on both sides:
+
+| Engine | Mated | Plies to mate (mean) | 3 pieces: mated / plies | 50-move draws |
+|---|---|---|---|---|
+| before #37 | 563 (96.4%) | 26.7 | 52 of 65 / 33.8 | 15 |
+| mop-up only | 564 (96.6%) | 21.3 | 53 / 27.4 | 12 |
+| #37 (tables + mop-up 10/20) | 567 (97.1%) | 20.8 | 53 / 20.9 | 3 |
+
+Every 3-piece position left unmated is a draw by the tables or one they don't
+cover (a Ghost that can still Haunt, a piece that can still come back from the
+Graveyard). The mop-up weights first tried (8 / 10) left one King + Vampire +
+Squire + 2 Vassals v King game to the 75-move rule (the Vassals shuffled
+sideways; see the PR about repetitions); 10 / 20 mates it.

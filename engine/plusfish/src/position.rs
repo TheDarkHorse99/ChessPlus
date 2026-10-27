@@ -253,6 +253,8 @@ pub struct Rules {
     pub haunt_kind: u8,
     /// Kinds that can ever be on the board in this game (forms included).
     pub kinds_present: u64,
+    /// The built-in endgame tables for each kind (`endgame::index_for`).
+    pub endgames: Vec<[u16; crate::endgame::STATES]>,
     ray_sq: Vec<u8>,
     rays: Vec<Ray>,
     ray_index: Vec<(u32, u32)>,
@@ -530,7 +532,9 @@ impl Rules {
             }
         }
         let gained = gen(nsq);
+        let endgames = crate::endgame::index_for(&cat);
         Rules {
+            endgames,
             cat,
             w,
             h,

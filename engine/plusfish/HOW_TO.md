@@ -12,7 +12,7 @@ to run, in what order, and how to read what comes out.
 | [2. Train Plusfish's judgement](#2-train-plusfishs-judgement-tuning) | after adding a piece or changing its rules | only to put the result in the game | ~1 min + a 5 min test match (+75 min for the opening terms) |
 | [3. The meta pool](#3-the-meta-pool) | after cost or rule changes, new pieces, or a stronger engine | no | 2-4 hours |
 | [4. Quick questions](#4-quick-questions) | any time | no | seconds to minutes |
-| [5. After changing a piece's rules](#5-after-changing-a-pieces-rules) | before 1-3 | sometimes | minutes |
+| [5. After changing a piece's rules](#5-after-changing-a-pieces-rules) | before 1-3 | sometimes (always to rebuild the endgame tables) | minutes |
 
 If you're doing several, do them in this order: **5, then 2, then 1, then 3**.
 Jobs 1 and 3 use Plusfish's judgement to play their games, so they come out
@@ -317,6 +317,23 @@ Plusfish reads the piece files, so it depends on what you changed:
 Then train (job 2) and re-value (job 1): the piece's old weights were learned
 under the old rules.
 
+**Endgame tables.** Plusfish has exact tables built in for a King and one
+piece against a lone King (every piece type except Kings, pawn types and
+pieces that promote). Each table remembers the rules of the piece it was made
+for, so after any change to how a piece moves or what it does, that piece's
+table is simply switched off (Plusfish plays those endings by search, as it
+did before the tables). To make new ones (about 20 seconds at 19 threads,
+then a rebuild, so Rust is needed for the last step):
+
+```bash
+$PF endgames --check                 # which tables still fit the pieces
+$PF endgames --threads 19            # writes engine/plusfish/tables/kxk.bin and lists every table
+bash engine/plusfish/build.sh        # builds them into bin/plusfish.exe and web/plusfish.wasm
+```
+
+Put the list it prints into `reports/endgames.txt`. A new piece type gets
+its tables the same way.
+
 ## Asking Claude to run these
 
 Claude can do every job here: "Do job 1 from engine/plusfish/HOW_TO.md with
@@ -336,6 +353,7 @@ rounds". Worth telling it:
 |---|---|
 | `bin/plusfish.exe` | the program (the game runs it for the eval bar; you run it for these jobs). Rebuilt by `build.sh` |
 | `params/tuned.txt` | Plusfish's trained weights, built into the program (job 2) |
+| `tables/kxk.bin` / `reports/endgames.txt` | the endgame tables built into the program, and what they say (job 5) |
 | `reports/balance_report.txt` / `.html` | the latest piece values (job 1) |
 | `reports/meta_pool.txt` / `META_POOL.md` | the meta pool and how it was found (job 3) |
 | `reports/FINDINGS.md` | earlier findings (the king-capture bug, first balance rounds) |

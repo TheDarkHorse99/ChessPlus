@@ -356,6 +356,12 @@ force search.
 The engine is a line-by-line port of `core/move_generator.gd` and
 `core/game_state.gd`, checked two ways:
 
+* `cargo test --release` checks the endgame tables: every stored result
+  agrees with the results one move later under the engine's own move rules
+  (six pieces, every position for the Rook), Black's pieces get the same
+  results as White's, search without the tables never finds a quicker mate
+  or a mate where they say draw, King + Queen and King + Rook take at most
+  10 and 16 moves (as in chess), and a changed piece loses its table.
 * `plusfish perft-suite`: the standard perft counts (start position,
   Kiwipete, CPW positions 3 to 5), the same ones the game's tests use, one
   depth deeper.
@@ -456,6 +462,26 @@ WebAssembly build, which has no threads). Clock games use a soft time target
 that stretches while the best move keeps changing. About 5M perft
 nodes/s and 0.5M search nodes/s per core; the game's GDScript bot does about
 4,500.
+
+Endgames (`src/endgame.rs`): exact tables for a King and one piece against a
+lone King, for every piece type that doesn't promote (31 tables: shields
+intact or broken, a Vampire's gained shield, a Werewolf that can still turn),
+made by `plusfish endgames` with the engine's own move rules and built into
+the program (`tables/kxk.bin`, 385 KB). Only the lone King's side to move is
+stored, on half the board (the pieces all move the same mirrored left to
+right); with the other side to move, the probe looks one move ahead. Values
+are distances to mate, packed with a small adaptive range coder that predicts
+each from its neighbours. Search scores these endings exactly (a mate that
+would come after the 50- or 75-move rule counts as a draw); each table
+carries a fingerprint of its piece's rules and the King's, so a changed piece
+loses its table until the tables are made again. `reports/endgames.txt` lists
+which pieces can force mate on their own and how long it can take (the Queen
+and Princess in 10 moves at most, the Rook 16, the Vampire 17, the wolf 33;
+Bishop, Knight, Archer, Cannon, Ghost, Paladin and others can't). When one
+side has only its King left and the other a piece that can capture (not a
+pawn type), the evaluation adds a "mop-up" term (`eval::mop_up`): the lone
+King's distance from the centre and the other King's closeness to it, so the
+stronger side makes progress towards mate with more pieces too.
 
 Limits: boards up to 128 squares (16x8, 11x11, ...) and 64 piece types
 (forms such as the Werewolf's wolf count; the game had 31 in Oct 2026).

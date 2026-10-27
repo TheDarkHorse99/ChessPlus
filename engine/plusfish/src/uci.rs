@@ -269,5 +269,9 @@ pub fn eval_breakdown(game: &Game, et: &EvalTables, params: &Params) -> String {
     for (name, v, c) in parts.iter().take(16) {
         out += &format!("{:<28} {:>8.1} {:>+9.2}\n", name, v, c / 100.0);
     }
+    let mop = mop_up(&game.pos, r);
+    if mop != 0 {
+        out += &format!("{:<28} {:>8} {:>+9.2}\n", "lone King to the edge", "", mop as f32 / 100.0);
+    }
     out.trim_end().to_string()
 }

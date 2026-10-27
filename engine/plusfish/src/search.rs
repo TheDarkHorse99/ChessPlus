@@ -4,6 +4,7 @@
 //! captures, shield breaks, Crack Shots and promotions.
 
 use crate::defs::MAX_KINDS;
+use crate::endgame::{self, Probe};
 use crate::eval::*;
 use crate::position::*;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -381,6 +382,9 @@ pub struct Searcher<'a> {
     depth_offset: i32,
     /// The score of the root move that last raised alpha (its line is pv[0]).
     root_score: i32,
+    /// Score King + piece v King endings from the built-in tables (on; off
+    /// only to test them).
+    pub use_tables: bool,
 }
 
 fn is_mate(s: i32) -> bool {
@@ -459,6 +463,7 @@ impl<'a> Searcher<'a> {
             root_depth: 0,
             depth_offset: 0,
             root_score: 0,
+            use_tables: true,
         }
     }
 
@@ -730,6 +735,7 @@ impl<'a> Searcher<'a> {
         let (r, et, params) = (self.r, self.et, self.params);
         let age = self.age;
         let sp = self.sp;
+        let use_tables = self.use_tables;
         std::thread::scope(|sc| {
             let mut handles = Vec::new();
             for i in 1..threads {
@@ -739,6 +745,7 @@ impl<'a> Searcher<'a> {
                     let mut h = Searcher::new(r, et, params, 1);
                     h.tt = tt;
                     h.sp = sp;
+                    h.use_tables = use_tables;
                     h.age = age;
                     h.stop = hs;
                     h.depth_offset = (i % 2) as i32;
@@ -946,6 +953,9 @@ impl<'a> Searcher<'a> {
             }
             if (p.occupied().count_ones() as usize) <= 5 && p.checkmate_impossible(r) {
                 return 0;
+            }
+            if let Some(s) = self.table_score(p, ply) {
+                return s;
             }
             // Mate distance pruning.
             alpha = alpha.max(-MATE + ply as i32);
@@ -1282,6 +1292,23 @@ impl<'a> Searcher<'a> {
         best
     }
 
+    /// The endgame tables' exact score for `p` (King and one piece against a
+    /// lone King), if they cover it. A mate that would come only after the
+    /// 50- or 75-move rule has made the game a draw counts as a draw.
+    fn table_score(&mut self, p: &Position, ply: usize) -> Option<i32> {
+        if !self.use_tables || p.occupied().count_ones() != 3 {
+            return None;
+        }
+        let result = endgame::probe(p, self.r)?;
+        self.nodes += 1;
+        let in_time = |d: u16| p.halfmove + (d as u32) < 100 && p.unchanged + (d as u32) < 150;
+        Some(match result {
+            Probe::Win(d) if in_time(d) => MATE - ply as i32 - d as i32,
+            Probe::Loss(d) if in_time(d) => -MATE + ply as i32 + d as i32,
+            _ => 0,
+        })
+    }
+
     fn has_pieces(&self, p: &Position, team: usize) -> bool {
         p.squares(team).any(|s| {
             let i = &self.r.info[kind_of(p.sq[s])];
@@ -1304,6 +1331,11 @@ impl<'a> Searcher<'a> {
         let r = self.r;
         if ply >= MAX_PLY {
             return self.eval(p);
+        }
+        if ply > 0 {
+            if let Some(s) = self.table_score(p, ply) {
+                return s;
+            }
         }
         // Transposition table: any stored result is deep enough here.
         let (_, e) = self.tt.probe(p.tt_key(), self.age);

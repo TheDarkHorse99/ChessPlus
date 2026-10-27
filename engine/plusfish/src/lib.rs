@@ -2,6 +2,7 @@
 
 pub mod army;
 pub mod defs;
+pub mod endgame;
 pub mod eval;
 pub mod game;
 pub mod html;

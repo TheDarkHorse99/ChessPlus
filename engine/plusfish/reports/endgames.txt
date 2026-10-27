@@ -1,0 +1,41 @@
+Endgame tables built into Plusfish: a King and one piece against a lone King
+(made by `plusfish endgames`, 25 Oct 2026, from data/pieces at that time).
+"wins (to move)": share of positions, with the piece's side to move, that it
+wins; "longest": the longest mate with best play from both sides; "bytes":
+packed size (0 = no mate anywhere, nothing stored). Pieces that promote (the
+Lance and the pawn types) have no tables: their endings depend on each game's
+promotion choices. The 50- and 75-move rules aren't part of the tables.
+
+piece                            wins (to move)      longest    bytes
+werewolf_wolf (form)                         93.0%   mate in 33    26071
+Archer                                    0.0%      no mate        0
+Assassin                                  0.0%    mate in 2      742
+Bard                                      0.0%      no mate        0
+Barbarian                                12.7%   mate in 12     5246
+Bishop                                    0.0%      no mate        0
+Cannon                                    0.0%      no mate        0
+Catapult                                  0.0%      no mate        0
+Cavalry                                 100.0%   mate in 13    18850
+Chariot                                 100.0%   mate in 17    27506
+Elephant                                  0.0%      no mate        0
+Galleon                                 100.0%   mate in 26    26452
+Ghost                                     0.1%    mate in 4     1116
+Jester                                  100.0%   mate in 16    22741
+Knight                                    0.0%      no mate        0
+Man                                     100.0%   mate in 18    19933
+Necromancer                               0.0%      no mate        0
+Paladin          shield broken            0.0%      no mate        0
+Parapet                                 100.0%   mate in 17    21416
+Princess                                100.0%   mate in 10    19160
+Queen                                   100.0%   mate in 10    19918
+Ram                                     100.0%   mate in 16    28371
+Rogue                                   100.0%   mate in 18    20877
+Rook                                    100.0%   mate in 16    28371
+Squire                                  100.0%   mate in 15    19605
+Vampire                                 100.0%   mate in 17    25042
+Vampire          shield gained          100.0%   mate in 16    25711
+Werewolf                                  0.1%    mate in 4     1116
+Wizard                                  100.0%   mate in 16    29235
+Paladin                                   0.4%    mate in 7     1216
+Werewolf         can still turn          92.8%   mate in 33    25027
+Wrote engine/plusfish/tables/kxk.bin (385411 bytes) in 21s. Rebuild Plusfish to build them in: bash engine/plusfish/build.sh

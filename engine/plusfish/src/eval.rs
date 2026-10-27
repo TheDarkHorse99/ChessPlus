@@ -545,9 +545,55 @@ pub fn evaluate(p: &Position, r: &Rules, et: &EvalTables, params: &Params) -> i3
     let mut acc = Weighted { w: &params.w, mg: 0.0, eg: 0.0 };
     features(p, r, et, &mut acc);
     let ph = phase(p, et);
-    let white = acc.mg * ph + acc.eg * (1.0 - ph);
+    let white = acc.mg * ph + acc.eg * (1.0 - ph) + mop_up(p, r) as f32;
     let s = if p.side == WHITE { white } else { -white };
     s.round() as i32
+}
+
+/// Centipawns per step the lone King is from the centre (counted in half
+/// squares, along both files and ranks), and per square the other King is
+/// closer to it (see `mop_up`).
+pub const MOP_EDGE: i32 = 10;
+pub const MOP_NEAR: i32 = 20;
+
+/// Driving a lone King to the edge (White's view; 0 in other positions). When
+/// one side has nothing left but its King and the other still has a piece
+/// that can capture (not a pawn type), the stronger side gains for the lone
+/// King being far from the centre and for its own King being close to it: the
+/// "mop-up" term chess engines use, so it makes progress towards mate instead
+/// of moving about until the 50-move rule (it did, with a Queen or a Vampire,
+/// Oct 2026). Not in `features`, so tuning doesn't see it.
+pub fn mop_up(p: &Position, r: &Rules) -> i32 {
+    for lone in 0..2 {
+        if p.occ[lone] != p.kings[lone] || p.kings[lone].count_ones() != 1 {
+            continue;
+        }
+        let strong = 1 - lone;
+        if p.kings[strong].count_ones() != 1 {
+            return 0;
+        }
+        let mut others = p.occ[strong] & !p.kings[strong];
+        let mut can_mate = false;
+        while others != 0 {
+            let s = others.trailing_zeros() as usize;
+            others &= others - 1;
+            let info = &r.info[kind_of(p.sq[s])];
+            can_mate |= info.can_capture && !info.is_pawn;
+        }
+        if !can_mate {
+            return 0;
+        }
+        let lk = p.kings[lone].trailing_zeros() as usize;
+        let sk = p.kings[strong].trailing_zeros() as usize;
+        let (lf, lr) = (r.file(lk), r.rank(lk));
+        // Twice the distance from the centre line: 1 (middle) to w - 1 (edge).
+        let off = |v: i32, n: i32| (2 * v - (n - 1)).abs();
+        let edge = off(lf, r.w) + off(lr, r.h);
+        let apart = (r.file(sk) - lf).abs().max((r.rank(sk) - lr).abs());
+        let bonus = MOP_EDGE * edge + MOP_NEAR * (r.w.max(r.h) - apart);
+        return if strong == WHITE { bonus } else { -bonus };
+    }
+    0
 }
 
 /// The material value of a kind for move ordering and pruning, in centipawns.

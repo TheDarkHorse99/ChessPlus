@@ -6,7 +6,7 @@ use plusfish_core::game::*;
 use plusfish_core::position::*;
 use plusfish_core::search::*;
 use plusfish_core::selfplay::*;
-use plusfish_core::{api, html, report, tune, uci, verify};
+use plusfish_core::{api, endgame, html, report, tune, uci, verify};
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 use plusfish_core::util::{Args, Rng};
@@ -64,6 +64,13 @@ Balancing
   tune      Fit the evaluation to saved games: plusfish tune games.jsonl --out params.txt
               --only mat,mob   tune just these features   --freeze open   all but these
               --skip N         ignore the first N plies (default 8)
+
+Endgame tables
+  endgames  Work out the tables built into Plusfish (King + one piece against a
+              lone King, every piece type) and write tables/kxk.bin; rebuild
+              Plusfish afterwards (bash engine/plusfish/build.sh)
+              --check   just show which built-in tables still fit the pieces
+              --out <file>
 
 Checking the rules against the game
   perft         --fen \"<fen>\" --depth N [--divide]
@@ -182,6 +189,7 @@ fn main() {
     }
     let cat = load_catalog(&args);
     match cmd {
+        "endgames" => run_endgames(&cat, &args),
         "perft" => {
             let fen = args.get("fen").unwrap_or(STANDARD_FEN);
             let depth: u32 = args.num("depth", 4);
@@ -839,6 +847,53 @@ fn main() {
             std::process::exit(1);
         }
     }
+}
+
+/// `plusfish endgames`: make the built-in endgame tables, or check them.
+fn run_endgames(cat: &Arc<Catalog>, args: &Args) {
+    let state_name = |s: usize| match s {
+        endgame::ST_BROKEN => "shield broken",
+        endgame::ST_GAINED => "shield gained",
+        endgame::ST_CAN_TURN => "can still turn",
+        _ => "",
+    };
+    if args.flag("check") {
+        let index = endgame::index_for(cat);
+        let (mut ok, mut stale) = (0, Vec::new());
+        for k in 0..cat.len() {
+            if !endgame::has_tables(&cat.defs[k]) {
+                continue;
+            }
+            for s in endgame::states_for(&cat.defs[k]) {
+                if index[k][s] == endgame::NO_TABLE {
+                    stale.push(format!("{} {}", cat.defs[k].name, state_name(s)).trim().to_string());
+                } else {
+                    ok += 1;
+                }
+            }
+        }
+        println!("{} endgame tables fit the pieces.", ok);
+        if stale.is_empty() {
+            println!("All pieces have tables.");
+        } else {
+            println!("No table (new piece, or its rules changed since the tables were made; run plusfish endgames): {}", stale.join(", "));
+        }
+        return;
+    }
+    let out = args.get("out").map(|s| s.to_string()).unwrap_or_else(|| {
+        if std::path::Path::new("engine/plusfish/tables").is_dir() { "engine/plusfish/tables/kxk.bin".into() } else { "tables/kxk.bin".into() }
+    });
+    let start = std::time::Instant::now();
+    println!("{:<16} {:<15} {:>13} {:>12} {:>8}", "piece", "", "wins (to move)", "longest", "bytes");
+    let data = endgame::make_all(cat, threads(args), |s| {
+        let id = cat.kind_by_id(&s.id).map(|k| cat.defs[k].name.clone()).unwrap_or(s.id.clone());
+        let name = if cat.kind_by_id(&s.id).map(|k| cat.defs[k].is_form).unwrap_or(false) { format!("{} (form)", s.id) } else { id };
+        let longest = if s.max_plies > 0 { format!("mate in {}", (s.max_plies + 1) / 2) } else { "no mate".into() };
+        println!("{:<16} {:<15} {:>12.1}% {:>12} {:>8}", name, state_name(s.state), 100.0 * s.win_share, longest, s.bytes);
+        std::io::stdout().flush().ok();
+    });
+    std::fs::write(&out, &data).unwrap_or_else(|e| die(&format!("{}: {}", out, e)));
+    println!("Wrote {} ({} bytes) in {:.0}s. Rebuild Plusfish to build them in: bash engine/plusfish/build.sh", out, data.len(), start.elapsed().as_secs_f64());
 }
 
 fn save_games(cat: &Arc<Catalog>, recs: &[GameRecord], path: &str) {
