@@ -1665,7 +1665,9 @@
 					]
 				]
 			},
-			"black_problems": [],
+			"black_problems": [
+				"Costs 40.5 points; the budget is 40."
+			],
 			"moves": [
 				"b2-a3",
 				"e7-e4",
@@ -3931,8 +3933,8 @@
 				"height": 8,
 				"lost": [],
 				"promo": [
-					"princess",
 					"wizard",
+					"princess",
 					"archer",
 					"chariot",
 					"squire",
@@ -4662,7 +4664,9 @@
 					]
 				]
 			},
-			"white_problems": []
+			"white_problems": [
+				"Costs 40.5 points; the budget is 40."
+			]
 		},
 		{
 			"black": {
@@ -6149,5 +6153,5 @@
 			"white_problems": []
 		}
 	],
-	"version": "9ffa477a061f"
+	"version": "94bf74735618"
 }
