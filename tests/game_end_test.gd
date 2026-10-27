@@ -196,3 +196,26 @@ func test_what_resets_the_seventy_five_move_count() -> void:
 	state = _parse_all("4k3/8/8/8/8/8/8/R3K3 w Q - 0 1 unchanged=30")
 	_play(state, ["e1-c1"])
 	check_eq(state.change_clock, 31, "Castling doesn't reset it")
+
+func test_repetition_counts_across_vassal_moves() -> void:
+	# Mac, 27 Oct 2026: a Vassal can step sideways and back, so its moves don't
+	# end the window for repetition (in chess a pawn move can't be undone).
+	var state := _parse_all("4k3/8/8/8/8/4(VS)3/8/K7 w - - 0 1")
+	var shuffle := ["e3-f3", "e8-d8", "f3-e3", "d8-e8"]
+	_play(state, shuffle)
+	check_eq(state.outcome(), Outcome.NONE, "Seen twice")
+	_play(state, shuffle)
+	check_eq(state.outcome(), Outcome.REPETITION, "Seen three times, Vassal moves and all")
+
+func test_a_piece_that_lost_its_first_move_is_a_new_position() -> void:
+	# The Abatis on its starting square still has its double step; stepped back
+	# and forward again it doesn't, so the start doesn't count toward it.
+	var state := _parse_all("4k3/8/8/8/8/8/4(AB)3/K7 w - - 0 1")
+	check(not state.board.get_piece(Vector2i(4, 1)).has_moved, "The Abatis starts unmoved")
+	var shuffle := ["e2-e1", "e8-d8", "e1-e2", "d8-e8"]
+	_play(state, shuffle)
+	_play(state, shuffle)
+	check_eq(state.outcome(), Outcome.NONE, "Same squares as the start three times, but the start had a double step")
+	_play(state, shuffle)
+	check_eq(state.outcome(), Outcome.REPETITION, "The moved Abatis's position three times")
+

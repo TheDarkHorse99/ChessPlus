@@ -370,13 +370,16 @@ func _undo_decoy(move: Move) -> void:
 
 ## How many times the current position has occurred, counting now. "Same position"
 ## means the same pieces on the same squares, same side to move, same castling
-## rights and same en passant possibilities. Only positions since the last capture
-## or pawn-type move can match. Each position's key is kept once worked out
+## rights and same en passant possibilities. Only positions since the last move
+## that changed the pieces (`changes_pieces`: a capture, a promotion, Raise Dead,
+## Haunt, Full Moon) can match; pawn-type moves no longer end the window (Mac,
+## 27 Oct 2026), because a Vassal can step sideways and an Abatis back, so their
+## moves can be undone and a position can come round again. Each position's key is kept once worked out
 ## (outcome() is asked after every move), so usually they're all known already;
 ## otherwise it steps back that far (undoing moves to look, then replaying them).
 func _repetition_count() -> int:
 	var key := _kept_position_key()
-	var steps := mini(halfmove_clock, history.size())
+	var steps := mini(change_clock, history.size())
 	var count := 1
 	# Position i (0 = the start) has id _position_ids[i], and the board had
 	# _board_changes[i] changes then (see make_move).
@@ -431,12 +434,34 @@ func _kept_position_key() -> String:
 func _position_key() -> String:
 	var fields := Fen.write(self).split(" ")
 	var key := " ".join([fields[0], fields[1], fields[2]])
+	# A piece that hasn't moved yet can have moves it loses once it moves (a
+	# first-move double step, an ability, a promotion), so an unmoved piece and
+	# the same piece back on its square aren't the same position. (Castling
+	# rights already cover Kings and castle partners; other pieces' first move
+	# changes nothing, so a Knight out and back still repeats, as in chess.)
+	var unmoved := PackedStringArray()
+	for rank in range(board.height):
+		for file in range(board.width):
+			var piece := board.get_piece(Vector2i(file, rank))
+			if piece and not piece.has_moved and _first_move_matters(piece.def):
+				unmoved.append(Board.square_name(Vector2i(file, rank)))
+	if not unmoved.is_empty():
+		key += " unmoved:" + ",".join(unmoved)
 	# The en passant square only matters if an en passant capture can really be made.
 	if not en_passant_squares.is_empty():
 		for move in moves():
 			if move.capture_square != move.to:
 				key += " " + Board.square_name(move.to)
 	return key
+
+## Whether a piece of this type loses something by moving for the first time.
+static func _first_move_matters(def: PieceDef) -> bool:
+	if def.ability != PieceDef.Ability.NONE or def.can_promote():
+		return true
+	for rule in def.move_rules:
+		if rule.first_move_max_steps > 0:
+			return true
+	return false
 
 ## True if neither side could ever checkmate. Worked out from the pieces' move data,
 ## not their names. Recognises: only royal pieces left; royals plus a single
